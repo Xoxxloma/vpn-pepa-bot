@@ -9,7 +9,7 @@ dayjs.extend(isSameOrBefore)
 const createBasicBillfields = (amount) => ({
     amount,
     currency: 'RUB',
-    comment: `Оплата подписки на ${amount} рублей`,
+    comment: `VPN-pepe. Оплата подписки на ${amount} рублей`,
     expirationDateTime: qiwiApi.getLifetimeByDay(0.02),
 });
 
@@ -17,18 +17,19 @@ const basicKeyboard = [['Выбрать подписку'], ["Моя подпи�
 
 
 const subscribes = {
-    "3 дня": {
-        text: '3 дня', termUnit: "day", term: 3, price: 10
-    },
-    "5 дней": {
-        text: '5 дней', termUnit: "day", term: 5, price: 20
-    },
-    "10 дней": {
-        text: '10 дней', termUnit: "day", term: 10, price: 35
-    },
     "15 дней": {
-        text: '15 дней', termType: "day", count: 15, price: 45
-    }
+        text: '15 дней', termUnit: "day", term: 15, price: 85
+    },
+    "1 месяц": {
+        text: '1 месяц', termUnit: "month", term: 1, price: 150
+    },
+    "3 месяца": {
+        text: '3 месяца', termUnit: "month", term: 3, price: 400
+    },
+    "6 месяцев": {
+        text: '6 месяцев', termUnit: "month", term: 6, price: 800
+    },
+
 }
 
 const prolongueSubscription = (currentExpiresIn, term, termUnit) => {
