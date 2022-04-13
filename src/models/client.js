@@ -20,7 +20,7 @@ const clientSchema = new Schema({
     expiresIn: {type: Date, default: Date.now},
     telegramId: Number,
     isSubscriptionActive: Boolean,
-    bill: billSchema,
+    currentBill: billSchema,
     paymentsHistory: {type: [billSchema], default: []},
     certificate: String
 })
