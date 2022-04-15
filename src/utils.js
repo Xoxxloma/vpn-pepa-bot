@@ -29,7 +29,21 @@ const subscribes = {
     "6 месяцев": {
         text: '6 месяцев', termUnit: "month", term: 6, price: 800
     },
+}
 
+const reminders = {
+    0: {
+        text: "Твоя подписка истекает уже сегодня",
+        sticker: "CAACAgIAAxkBAAIBDWJZiG3Lqqq0ExLFi3Vny3M5Qc9OAALmAwACierlBzMAAWjb3S3WBiME"
+    },
+    3: {
+        text: "Напоминаем, что твоя подписка истекает через 3 дня",
+        sticker: "CAACAgQAAxkBAAIBDmJZiKfJRM0p1tuPUO4b46sM0fK3AAJBAQACqCEhBq9mxhtt7kuLIwQ"
+    },
+    5: {
+        text: "Напоминаем, что твоя подписка истекает через 5 дней",
+        sticker: "CAACAgIAAxkBAAIBDGJZiDP891J52w0PulOGyGHpv8QHAALlAwACierlB1lbJym0nl3aIwQ"
+    }
 }
 
 const prolongueSubscription = (currentExpiresIn, term, termUnit) => {
@@ -78,6 +92,22 @@ const removeCertificate = async (telegramId) => {
 
 const isThatSameBill = (bill, term) => dayjs().isSameOrBefore(dayjs(bill.expirationDateTime)) && bill.term === term
 
+//const dispatcher = () => {
+    // const users = await Client.find()
+    //
+    // const promises = users.map(async(user) => {
+    //     await bot.telegram.sendMessage(user.telegramId, 'Привет!\n\nСегодня мы объявляем о завершении тестового периода и переходе к более ' +
+    //         'длинным срокам действия подписок:\n<b>один месяц / три месяца / полгода</b> + оставляем пробный период 15 дней.\n\n' +
+    //         'Всем учавствовавшим в тестовом периоде и имеющим активную подписку - добавлено 3 дня к сроку действия подписки, тем у кого подписка уже истекла - при возобновлении так же будет добавлено 3 дня автоматически.\n\n' +
+    //         'Спасибо, что остаетесь с нами!', { parse_mode: 'HTML' })
+    //     await bot.telegram.sendSticker(user.telegramId, "CAACAgIAAxkBAAIHwWJSvU7yzY6We7E_VONLhTT2-AuoAAJnBAACierlB9ULc0Y6gUESIwQ")
+    // });
+    //
+    // await Promise.all(promises)
+    // await conn.close()
+    // console.log("Dispatched to all!")
+//}
+
 module.exports = {
     createBasicBillfields,
     prolongueSubscription,
@@ -87,5 +117,6 @@ module.exports = {
     removeCertificate,
     isThatSameBill,
     basicKeyboard,
-    subscribes
+    subscribes,
+    reminders
 }

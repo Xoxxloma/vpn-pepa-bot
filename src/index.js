@@ -41,7 +41,6 @@ const operationResultPoller = async(billId, chatId, interval) => {
                 client.currentBill.status = result.status
                 client.paymentsHistory.push(client.currentBill)
                 client.currentBill = {}
-                client.currentBill = {}
                 await client.save()
                 await bot.telegram.sendMessage(chatId, 'Счет был отклонен, попробуйте снова')
             }
