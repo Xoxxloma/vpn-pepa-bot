@@ -1,5 +1,5 @@
 const { Client, conn, bot } = require('./api')
-const { reminders } = require('./utils')
+const { reminders } = require('./consts')
 const dayjs = require('dayjs')
 
 

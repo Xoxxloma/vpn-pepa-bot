@@ -1,16 +1,14 @@
 const { Markup, Telegraf } = require('telegraf');
 const { qiwiApi, bot, Client } = require('./api')
 const fs = require('fs')
-
-const { createBasicBillfields, basicKeyboard, subscribes, prolongueSubscription, getTelegramId, getUserByTelegramId, createCertificate, isThatSameBill } = require('./utils')
-
+const { basicKeyboard, subscribes, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp, dimaID, kostyaId } = require('./consts')
+const { createBasicBillfields, prolongueSubscription, getTelegramId, getUserByTelegramId, createCertificate, isThatSameBill } = require('./utils')
+const { notifySupport } = require("./utils");
 const dayjs = require('dayjs')
-const helpRequest = /^помощь/i
-const helpResponse = /^ответ поддержки/i
-const payText = /^Оплатить/i
-const telegramIdRegexp = /\d{7,12}/i
-const dimaID = process.env.DIMA_TELEGRAM_ID
-const kostyaId = process.env.KOSTYA_TELEGRAM_ID
+const {faqInfoMessage} = require("./consts");
+const {startInfoMessage} = require("./consts");
+const {createMessagesToSupport} = require("./utils");
+
 bot.use(Telegraf.log())
 
 const operationResultPoller = async(billId, chatId, interval) => {
@@ -53,7 +51,7 @@ const operationResultPoller = async(billId, chatId, interval) => {
             }
         }  catch (e) {
             console.log(e)
-            fs.appendFileSync('./log.txt', e)
+            fs.appendFileSync('./log.txt', JSON.stringify(e))
             await bot.telegram.sendMessage(chatId, 'Произошла ошибка, повторите попытку позже или напишите нам')
         }
     }
@@ -109,49 +107,18 @@ bot.use(async(ctx, next) => {
             await paymentHandler(ctx, subscription)
         } catch (e) {
             console.log(e)
-            fs.appendFileSync('./log.txt', e)
+            fs.appendFileSync('./log.txt', JSON.stringify(e))
             return await ctx.reply('Произошла ошибка, попробуйте позже')
         }
-    }
-    if (helpRequest.test(messageText)) {
-        const {message: {from : {id, username, first_name, last_name }}} = ctx
-        const name = username ? `@${username}` : `${first_name} ${last_name ?? ''}`
-        try {
-            await bot.telegram.sendMessage(dimaID, `#Поддержка\nСообщение от пользователя ${name} с id <b>${id}</b>\n${messageText.replace(helpRequest, '')}`, { parse_mode: 'HTML', disable_web_page_preview: true})
-            await bot.telegram.sendMessage(kostyaId, `#Поддержка\nСообщение от пользователя ${name} с id <b>${id}</b>\n${messageText.replace(helpRequest, '')}`, { parse_mode: 'HTML', disable_web_page_preview: true})
-            return await ctx.reply('Ваш запрос принят, ожидайте ответ от бота, среднее время ожидания ответа - 2 часа')
-        } catch (e) {
-            fs.appendFileSync('./log.txt', e)
-            return await ctx.reply('Произошла ошибка, попробуйте снова')
-        }
-    }
-
-    if (helpResponse.test(messageText)) {
-        try {
-            const {message: {from : {id }}} = ctx
-            const chatId = messageText.match(telegramIdRegexp)[0]
-            const responseText = messageText.replace(telegramIdRegexp, '').replace(helpResponse, '').trimLeft()
-            await bot.telegram.sendMessage(id === dimaID ? kostyaId : dimaID, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`, { parse_mode: 'HTML'})
-            return await bot.telegram.sendMessage(chatId, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`, { parse_mode: 'HTML'})
-        } catch (e) {
-            fs.appendFileSync('./log.txt', e)
-            return await ctx.reply('Ошибка, проверьте правильность введенной информации по паттерну [ответ поддержки] [id пользователя] [текст ответа]')
-        }
-
     }
 
     await next()
 })
 
+//-------------- COMMANDS BLOCK -------------- //
+
 bot.command('start', async (ctx) => {
-    await bot.telegram.sendMessage(ctx.from.id, "<b>Добрый день, я VPN бот, рад приветствовать тебя.</b>\n" +
-        "Здесь ты можешь приобрести подписку на мой сервис и пользоваться интернетом без ограничений.\n" +
-        "Чтобы вызвать клавиатуру для взаимодействия со мной - напиши команду /keyboard.\n" +
-        "Основные разделы:\n- <b>«Выбрать подписку»</b> приведет тебя к выбору тарифа и дальнейшей оплате\n" +
-        "- <b>«Моя подписка»</b> покажет срок действия подписки и поможет получить файл .ovpn заново, если вдруг не сможешь его найти\n" +
-        "- <b>«FAQ»</b> расскажет процедуру подключения и работы с VPN\n" +
-        "- <b>«Контакты»</b> если возникнут какие нибудь вопросы или проблемы - контакты найдешь тут.\n" +
-        "На этом все, приятного использования сервиса.", { parse_mode: 'HTML', disable_web_page_preview: true})
+    await bot.telegram.sendMessage(ctx.from.id, startInfoMessage, { parse_mode: 'HTML', disable_web_page_preview: true})
     return await ctx.reply('Выберите опцию', Markup
         .keyboard(basicKeyboard)
         .oneTime()
@@ -167,6 +134,11 @@ bot.command('keyboard', async (ctx) => {
     )
 })
 
+//-------------- COMMANDS BLOCK -------------- //
+
+
+//-------------- NAVIGATION BLOCK -------------- //
+
 bot.hears(['Выбрать подписку', 'Обратно к выбору подписки'], async (ctx) => {
     return await ctx.reply('Выберите опцию', Markup
         .keyboard([Object.keys(subscribes), ['В главное меню']])
@@ -174,6 +146,79 @@ bot.hears(['Выбрать подписку', 'Обратно к выбору п
         .resize()
     )
 })
+
+bot.hears('В главное меню', async (ctx) => {
+    return await ctx.reply('Выберите опцию', Markup
+        .keyboard(basicKeyboard)
+        .oneTime()
+        .resize()
+    )
+})
+
+//-------------- NAVIGATION BLOCK -------------- //
+
+bot.hears('Test', async(ctx) => {
+    await bot.telegram.sendPhoto(ctx.from.id, "https://ru-static.z-dn.net/files/d20/4aa2877ed84590b5b8d0a9359170e3a1.png", {
+        caption: 'Оцените, пожалуйста, общее впечатление от пользования сервисом.',
+        reply_markup: {
+            inline_keyboard: [
+                [
+                    { text: '😃 Отлично', callback_data: 'Good'},
+                    { text: '😡 Плохо', callback_data: 'Bad'}
+                ]
+            ]
+        }
+    })
+})
+
+
+//-------------- SUPPORT BLOCK -------------- //
+
+bot.hears([helpRequest, feedbackRequest], async (ctx) => {
+    const [messageToClient, messageToSupport] = createMessagesToSupport(ctx)
+
+    try {
+        await notifySupport(bot, messageToSupport)
+        return await ctx.reply(messageToClient)
+    } catch (e) {
+        fs.appendFileSync('./log.txt', JSON.stringify(e))
+        return await ctx.reply('Произошла ошибка, попробуйте снова')
+    }
+})
+
+bot.hears(helpResponse, async(ctx) => {
+    const {message: { text}} = ctx
+    try {
+        const {message: {from : {id }}} = ctx
+        const chatId = text.match(telegramIdRegexp)[0]
+        const responseText = text.replace(telegramIdRegexp, '').replace(helpResponse, '').trimLeft()
+        await bot.telegram.sendMessage(id === dimaID ? kostyaId : dimaID, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`, { parse_mode: 'HTML'})
+        return await bot.telegram.sendMessage(chatId, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`, { parse_mode: 'HTML'})
+    } catch (e) {
+        fs.appendFileSync('./log.txt', JSON.stringify(e))
+        return await ctx.reply('Ошибка, проверьте правильность введенной информации по паттерну [ответ поддержки] [id пользователя] [текст ответа]')
+    }
+})
+
+bot.action(['Good', 'Bad'], async(ctx) => {
+    const { data, from, message } = ctx.update.callback_query
+    const userName = from.username ? `@${from.username}` : `${from.first_name} ${from.last_name ?? ''}`
+
+    if (data === 'Good') {
+        await bot.telegram.sendMessage(ctx.from.id, 'Благодарим за участие в опросе, очень рады что вам все нравится ❤️️️')
+    } else {
+        await bot.telegram.sendMessage(ctx.from.id, 'Нам крайне жаль, что у вас осталось негативное впечатление от использование сервиса.\n' +
+            'Напишите нам, что вызвало трудности и не понравилось и мы обязательно станем лучше 💔.\n' +
+            'Отправьте нам свой фидбэк на почту vpnpepa@gmail.com или же напишите боту, предложение начните со слова фидбэк.\n\n' +
+            'Например: фидбэк хотелось бы более гибкие тарифы.')
+    }
+    await bot.telegram.editMessageReplyMarkup(from.id, message.message_id)
+    await notifySupport(bot, `#Опрос\nПользователь ${userName}, оценка: #${data}`)
+})
+
+//-------------- SUPPORT BLOCK -------------- //
+
+//-------------- SUBSCRIPTION BLOCK -------------- //
 
 bot.hears('Моя подписка', async (ctx) => {
     try {
@@ -189,7 +234,7 @@ bot.hears('Моя подписка', async (ctx) => {
             .resize()
         )
     } catch (e) {
-        fs.appendFileSync('./log.txt', e)
+        fs.appendFileSync('./log.txt', JSON.stringify(e))
         return ctx.reply("Произошла ошибка, попробуйте позднее")
     }
 })
@@ -201,26 +246,12 @@ bot.hears('Получить заново сертификат', async (ctx) => {
     return await ctx.replyWithDocument({source: Buffer.from(findedUser.certificate), filename: `${findedUser.telegramId}.ovpn`})
 })
 
-bot.hears('Получить подробную инструкцию в PDF', async (ctx) => {
-    return await ctx.replyWithDocument({source: './howTo.pdf', filename: 'Инструкция.pdf'})
-})
+//-------------- SUBSCRIPTION BLOCK -------------- //
 
-bot.hears('Контакты', async (ctx) => {
-    return await ctx.reply('По всем вопросам на почту vpnpepa@gmail.com или напиши боту, свое сообщение начните со слова ПОМОЩЬ и далее текст своего вопроса.\nНапример: помощь не пришел впн профиль.')
-})
+//-------------- FAQ BLOCK -------------- //
 
 bot.hears('FAQ', async (ctx) => {
-    await bot.telegram.sendMessage(ctx.from.id, 'После оплаты бот в течение нескольких минут пришлет вам файл ******.ovpn.\n\n' +
-        'Для того чтобы начать пользоваться VPN Вам необходимо установить программу OpenVPN.\n\nСсылки на официальные источники для скачивания:\n' +
-        '<a href="https://apps.apple.com/ru/app/openvpn-connect/id590379981">AppleStore</a>\n' +
-        '<a href="https://play.google.com/store/apps/details?id=net.openvpn.openvpn">Google Play</a>\n' +
-        '<a href="https://openvpn.net/community-downloads/">Desktop</a>\n\n' +
-        'Далее:\n' +
-        '- скачиваете файл, присланный ботом (далее <b>Конфигурационный файл</b>)\n' +
-        '- открываете OpenVpn\n' +
-        '- <b>Мобильные устройства</b> выбираете вкладку File(Файл), в появившемся списке файлов находите свой <b>Конфигурационный файл</b>, нажимаете кнопку Import(Импорт), на следующем экране нажимаете на кнопку справа вверху Add(Добавить)\n' +
-        '- <b>Стационарные компьютеры</b> правой кнопкой мыши кликаете по иконке в панели задач, далее нажимаете импорт конфигурации, указываете свой <b>Конфигурационный файл</b>, после успешного импорта снова правой кнопкой мыши кликаете по иконке в панели задач и выбираете свежедобавленный профиль с таким же именем как и ваш <b>Конфигурационный файл</b>, далее выбираете опцию подключиться \n'+
-        '- Ваш профиль работает\n\n Для отключения впн на <b>мобильных устройствах</b> достаточно сдвинуть слайдер влево, на <b>Стационарных компьютерах</b> правой кнопкой мыши кликаете по иконке в панели задач и находите свой профиль и выбираете опцию отключиться\n\nВы можете скачать расширенную пошаговую инструкцию по кнопке ниже', { parse_mode: 'HTML', disable_web_page_preview: true})
+    await bot.telegram.sendMessage(ctx.from.id, faqInfoMessage, { parse_mode: 'HTML', disable_web_page_preview: true})
     return await ctx.reply('Выберите опцию', Markup
         .keyboard([['Получить подробную инструкцию в PDF'], ['В главное меню']])
         .oneTime()
@@ -228,14 +259,16 @@ bot.hears('FAQ', async (ctx) => {
     )
 })
 
-
-bot.hears('В главное меню', async (ctx) => {
-    return await ctx.reply('Выберите опцию', Markup
-        .keyboard(basicKeyboard)
-        .oneTime()
-        .resize()
-    )
+bot.hears('Получить подробную инструкцию в PDF', async (ctx) => {
+    return await ctx.replyWithDocument({source: './howTo.pdf', filename: 'Инструкция.pdf'})
 })
+//-------------- FAQ BLOCK -------------- //
+
+
+//-------------- CONTACTS BLOCK -------------- //
+bot.hears('Контакты', async (ctx) => {
+    return await ctx.reply('По всем вопросам на почту vpnpepa@gmail.com или напиши боту, свое сообщение начните со слова ПОМОЩЬ и далее текст своего вопроса.\n\nНапример: помощь не пришел впн профиль.')
+})
+//-------------- CONTACTS BLOCK -------------- //
 
 bot.launch()
-
