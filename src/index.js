@@ -15,6 +15,7 @@ const operationResultPoller = async(billId, chatId, interval) => {
 
     const client = await Client.findOne({'currentBill.id': billId })
 
+
     const checkCondition = async () => {
         try {
             const result = await qiwiApi.getBillInfo(billId)
