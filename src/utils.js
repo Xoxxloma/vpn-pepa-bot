@@ -75,6 +75,8 @@ const notifySupport = async (bot, message) => {
 
 const isThatSameBill = (bill, term) => dayjs().isSameOrBefore(dayjs(bill.expirationDateTime)) && bill.term === term
 
+const isBotBlocked = (e) => e?.response?.error_code === 403 && e?.response?.description === 'Forbidden: bot was blocked by the user'
+
 module.exports = {
     createBasicBillfields,
     prolongueSubscription,
@@ -84,5 +86,6 @@ module.exports = {
     removeCertificate,
     isThatSameBill,
     notifySupport,
-    createMessagesToSupport
+    createMessagesToSupport,
+    isBotBlocked
 }

@@ -2,12 +2,10 @@ const { Markup, Telegraf } = require('telegraf');
 const { qiwiApi, bot, Client } = require('./api')
 const fs = require('fs')
 const { basicKeyboard, subscribes, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp, dimaID, kostyaId } = require('./consts')
-const { createBasicBillfields, prolongueSubscription, getTelegramId, getUserByTelegramId, createCertificate, isThatSameBill } = require('./utils')
-const { notifySupport } = require("./utils");
+const { createBasicBillfields, prolongueSubscription, getTelegramId, getUserByTelegramId, createCertificate, isThatSameBill, notifySupport, isBotBlocked, createMessagesToSupport } = require('./utils')
 const dayjs = require('dayjs')
-const {faqInfoMessage} = require("./consts");
-const {startInfoMessage} = require("./consts");
-const {createMessagesToSupport} = require("./utils");
+const {faqInfoMessage, downloadFrom, startInfoMessage} = require("./consts");
+
 
 bot.use(Telegraf.log())
 
@@ -33,8 +31,12 @@ const operationResultPoller = async(billId, chatId, interval) => {
                 client.paymentsHistory.push(client.currentBill)
                 client.currentBill = {}
                 await client.save()
-                await bot.telegram.sendMessage(chatId, 'Успешно оплачено! Используйте этот файл для импорта в openVPN, более подробно в инструкции в разделе FAQ, приятного пользования!')
-                await bot.telegram.sendDocument(chatId,  {source: certificatePath, filename: `${client.telegramId}.ovpn`})
+                await bot.telegram.sendDocument(chatId,
+                    {source: certificatePath, filename: `${client.telegramId}.ovpn`},
+                        {
+                            parse_mode: 'HTML',
+                            caption:`Успешно оплачено!\n\nТвоя подписка активна до: ${prolongueDate.format("DD.MM.YYYY")}\n\n` + downloadFrom
+                        })
             }
             if (result.status.value === 'REJECTED') {
                 client.currentBill.status = result.status
@@ -53,7 +55,9 @@ const operationResultPoller = async(billId, chatId, interval) => {
         }  catch (e) {
             console.log(e)
             fs.appendFileSync('./log.txt', JSON.stringify(e))
-            await bot.telegram.sendMessage(chatId, 'Произошла ошибка, повторите попытку позже или напишите нам')
+            if (!isBotBlocked(e)) {
+                await bot.telegram.sendMessage(chatId, 'Произошла ошибка, повторите попытку позже или напишите нам')
+            }
         }
     }
     checkCondition()
@@ -119,7 +123,12 @@ bot.use(async(ctx, next) => {
 //-------------- COMMANDS BLOCK -------------- //
 
 bot.command('start', async (ctx) => {
-    await bot.telegram.sendMessage(ctx.from.id, startInfoMessage, { parse_mode: 'HTML', disable_web_page_preview: true})
+    await bot.telegram.sendPhoto(
+        ctx.from.id,
+        'AgACAgIAAxkBAAICVGJuYclbZGUMu0TT6Xd_C6oMwmv1AAJQujEbg2B4S_QdyBxs8cXsAQADAgADeQADJAQ',
+        {parse_mode: 'HTML', caption: startInfoMessage}
+        )
+    await bot.telegram.sendMessage(ctx.from.id, "Для тебя активна <b>бесплатная подписка на 3 дня\n<tg-spoiler>/getTrial</tg-spoiler> !</b> Попробуй, понравится - присоединяйся :)", { parse_mode: 'HTML' })
     return await ctx.reply('Выберите опцию', Markup
         .keyboard(basicKeyboard)
         .oneTime()
@@ -133,6 +142,43 @@ bot.command('keyboard', async (ctx) => {
         .oneTime()
         .resize()
     )
+})
+
+bot.command('getTrial', async (ctx) => {
+    const telegramId = ctx.message.from.id
+    const { chat } = ctx
+    const name = `${chat.first_name} ${chat.last_name || ''}`.trim()
+    const findedUser = await getUserByTelegramId(telegramId)
+
+    try {
+        if (!findedUser) {
+            const prolongueDate = prolongueSubscription(dayjs(), 3, "day")
+            const certificatePath = await createCertificate(telegramId)
+            const cert = fs.readFileSync(certificatePath)
+            const userToBase = {telegramId, name, isSubscriptionActive: true, expiresIn: prolongueDate, currentBill: {}, certificate: Buffer.from(cert)}
+            await Client.create(userToBase)
+            await ctx.telegram.sendDocument(ctx.from.id,
+                {source: certificatePath, filename: `${telegramId}.ovpn`},
+                {
+                    parse_mode: 'HTML',
+                    caption: `Твоя подписка активна до: ${prolongueDate.format("DD.MM.YYYY")}\n\n` + downloadFrom
+                })
+        } else {
+            await ctx.telegram.sendMessage(ctx.from.id, 'К сожалению, услуга доступна только для новых клиентов')
+            await ctx.telegram.sendSticker(ctx.from.id, 'CAACAgIAAxkBAAICJGJuVW2T3Ldh4i6q8X3xTe5pgdvAAAJeBAACierlB5mrkRLww5GWJAQ')
+        }
+
+        return await ctx.reply('Выберите опцию', Markup
+            .keyboard(basicKeyboard)
+            .oneTime()
+            .resize()
+        )
+    } catch (e) {
+        if (!isBotBlocked(e)) {
+            await ctx.telegram.sendMessage(ctx.from.id, 'Что то пошло не так, попробуйте позднее')
+        }
+    }
+
 })
 
 //-------------- COMMANDS BLOCK -------------- //
@@ -157,20 +203,6 @@ bot.hears('В главное меню', async (ctx) => {
 })
 
 //-------------- NAVIGATION BLOCK -------------- //
-
-bot.hears('Test', async(ctx) => {
-    await bot.telegram.sendPhoto(ctx.from.id, "https://ru-static.z-dn.net/files/d20/4aa2877ed84590b5b8d0a9359170e3a1.png", {
-        caption: 'Оцените, пожалуйста, общее впечатление от пользования сервисом.',
-        reply_markup: {
-            inline_keyboard: [
-                [
-                    { text: '😃 Отлично', callback_data: 'Good'},
-                    { text: '😡 Плохо', callback_data: 'Bad'}
-                ]
-            ]
-        }
-    })
-})
 
 
 //-------------- SUPPORT BLOCK -------------- //
