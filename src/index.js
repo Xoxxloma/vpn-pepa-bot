@@ -125,7 +125,7 @@ bot.use(async(ctx, next) => {
 bot.command('start', async (ctx) => {
     await bot.telegram.sendPhoto(
         ctx.from.id,
-        'AgACAgIAAxkBAAICVGJuYclbZGUMu0TT6Xd_C6oMwmv1AAJQujEbg2B4S_QdyBxs8cXsAQADAgADeQADJAQ',
+        'AgACAgIAAxkBAAIMwGJubUyAb1RGDkmlt2YVLS-LwerHAAI1uDEbchFwS3mlZ3Pg0niAAQADAgADeQADJAQ',
         {parse_mode: 'HTML', caption: startInfoMessage}
         )
     await bot.telegram.sendMessage(ctx.from.id, "Для тебя активна <b>бесплатная подписка на 3 дня\n<tg-spoiler>/getTrial</tg-spoiler> !</b> Попробуй, понравится - присоединяйся :)", { parse_mode: 'HTML' })
