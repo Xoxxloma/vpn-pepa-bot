@@ -18,11 +18,13 @@ const billSchema = new Schema({
 const clientSchema = new Schema({
     name: String,
     expiresIn: {type: Date, default: Date.now},
+    username: {type: String, default: ''},
     telegramId: Number,
-    isSubscriptionActive: Boolean,
-    currentBill: billSchema,
+    isSubscriptionActive: {type: Boolean, default: false},
+    currentBill: {type: billSchema, default: {} },
     paymentsHistory: {type: [billSchema], default: []},
-    certificate: String
+    certificate: {type: String, default: ''},
+    authCode: {type: String, default: ''},
 })
 
 module.exports = clientSchema

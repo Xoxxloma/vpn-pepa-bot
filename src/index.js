@@ -1,6 +1,7 @@
 const { Markup, Telegraf } = require('telegraf');
 const { qiwiApi, bot, Client } = require('./api')
 const fs = require('fs')
+const { v4: uuidv4 } = require('uuid');
 const { basicKeyboard, subscribes, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp, dimaID, kostyaId } = require('./consts')
 const { createBasicBillfields, prolongueSubscription, getTelegramId, getUserByTelegramId, createCertificate, isThatSameBill, notifySupport, isBotBlocked, createMessagesToSupport } = require('./utils')
 const dayjs = require('dayjs')
@@ -92,7 +93,7 @@ const paymentHandler = async (ctx, subscription) => {
 }
 
 
-bot.telegram.setMyCommands([{command: '/start', description: 'Начало работы'}, {command: '/keyboard', description: 'Вызов клавиатуры бота'}])
+bot.telegram.setMyCommands([{command: '/keyboard', description: 'Вызов клавиатуры бота'}])
 
 bot.use(async(ctx, next) => {
 
@@ -123,17 +124,41 @@ bot.use(async(ctx, next) => {
 //-------------- COMMANDS BLOCK -------------- //
 
 bot.command('start', async (ctx) => {
-    await bot.telegram.sendPhoto(
-        ctx.from.id,
-        'AgACAgIAAxkBAAIMwGJubUyAb1RGDkmlt2YVLS-LwerHAAI1uDEbchFwS3mlZ3Pg0niAAQADAgADeQADJAQ',
-        {parse_mode: 'HTML', caption: startInfoMessage}
+    if (ctx.message.text.includes('auth')) {
+        const authCode = uuidv4()
+        const telegramId = getTelegramId(ctx)
+        const username = ctx.update.message.from.username
+        const findedUser = await Client.findOne({ telegramId })
+        if (findedUser) {
+            if (findedUser.authCode) {
+                await bot.telegram.sendMessage(telegramId, 'Используй этот код для регистрации в приложении')
+                return await ctx.reply(findedUser.authCode)
+            } else {
+                findedUser.authCode = authCode
+                await findedUser.save()
+            }
+        } else {
+            const { chat } = ctx
+            const name = `${chat.first_name} ${chat.last_name || ''}`.trim()
+            const userToBase = {telegramId, name, username, expiresIn: dayjs(), authCode }
+            await Client.create(userToBase)
+        }
+        await bot.telegram.sendMessage(telegramId, 'Используй этот код для регистрации в приложении')
+        return await ctx.reply(authCode)
+
+    } else {
+        await bot.telegram.sendPhoto(
+            ctx.from.id,
+            'AgACAgIAAxkBAAIMwGJubUyAb1RGDkmlt2YVLS-LwerHAAI1uDEbchFwS3mlZ3Pg0niAAQADAgADeQADJAQ',
+            {parse_mode: 'HTML', caption: startInfoMessage}
+            )
+        await bot.telegram.sendMessage(ctx.from.id, "Для тебя активна <b>бесплатная подписка на 3 дня\n<tg-spoiler>/getTrial</tg-spoiler> !</b> Попробуй, понравится - присоединяйся :)", { parse_mode: 'HTML' })
+        return await ctx.reply('Выберите опцию', Markup
+            .keyboard(basicKeyboard)
+            .oneTime()
+            .resize()
         )
-    await bot.telegram.sendMessage(ctx.from.id, "Для тебя активна <b>бесплатная подписка на 3 дня\n<tg-spoiler>/getTrial</tg-spoiler> !</b> Попробуй, понравится - присоединяйся :)", { parse_mode: 'HTML' })
-    return await ctx.reply('Выберите опцию', Markup
-        .keyboard(basicKeyboard)
-        .oneTime()
-        .resize()
-    )
+    }
 })
 
 bot.command('keyboard', async (ctx) => {

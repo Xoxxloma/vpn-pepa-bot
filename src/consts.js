@@ -63,6 +63,11 @@ const faqInfoMessage = 'После оплаты бот в течение нес�
 const downloadFrom = 'Скачай свой профиль и через <b>OpenVPN</b> (<a href="https://play.google.com/store/apps/details?id=net.openvpn.openvpn">Google Play</a>/<a href="https://apps.apple.com/ru/app/openvpn-connect">AppStore</a>) подключайся с любого устройства!\n\n' +
     'Остались вопросы? Посмотри инструкцию в разделе<b>«FAQ»</b>'
 
+const androidPres = 'Это комета? Это спутник? Это самолет? Это звезда взрывается? А может быть это летающая тарелка?\n\n' +
+        'Нет, нет и еще раз нет!\nЭто клиент Pepa Vpn теперь на Android!\nЗабирай по ссылке прямиком из Google Play Store ' +
+        '<a href="https://play.google.com/store/apps/details?id=com.pepavpn">Pepa VPN</a>\n\n' +
+        '<b>P.S.</b> Владельцам айфонов - клиенту на IOS так же быть. Твердо и четко! В ближайшей перспективе.'
+
 module.exports = {
     subscribes, reminders, basicKeyboard, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp, dimaID, kostyaId,
     startInfoMessage, faqInfoMessage, downloadFrom
