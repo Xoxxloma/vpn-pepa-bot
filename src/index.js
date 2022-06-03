@@ -38,6 +38,7 @@ const operationResultPoller = async(billId, chatId, interval) => {
                             parse_mode: 'HTML',
                             caption:`Успешно оплачено!\n\nТвоя подписка активна до: ${prolongueDate.format("DD.MM.YYYY")}\n\n` + downloadFrom
                         })
+                await notifySupport(bot, `Приобретена подписка через бота!\n\nПользователь ${client.name}`)
             }
             if (result.status.value === 'REJECTED') {
                 client.currentBill.status = result.status
@@ -140,8 +141,12 @@ bot.command('start', async (ctx) => {
         } else {
             const { chat } = ctx
             const name = `${chat.first_name} ${chat.last_name || ''}`.trim()
-            const userToBase = {telegramId, name, username, expiresIn: dayjs(), authCode }
+            const prolongueDate = prolongueSubscription(dayjs(), 3, "day")
+            const certificatePath = await createCertificate(telegramId)
+            const cert = fs.readFileSync(certificatePath)
+            const userToBase = {telegramId, name, username, expiresIn: prolongueDate, isSubscriptionActive: true, certificate: Buffer.from(cert), authCode }
             await Client.create(userToBase)
+            await bot.telegram.sendMessage(telegramId, 'Для тебя активирован триал период сроком на 3 дня. Приятного пользования!')
         }
         await bot.telegram.sendMessage(telegramId, 'Используй этот код для регистрации в приложении')
         return await ctx.reply(authCode)
@@ -248,10 +253,13 @@ bot.hears(helpResponse, async(ctx) => {
     const {message: { text}} = ctx
     try {
         const {message: {from : {id }}} = ctx
-        const chatId = text.match(telegramIdRegexp)[0]
+        const clientTelegramId = text.match(telegramIdRegexp)[0]
         const responseText = text.replace(telegramIdRegexp, '').replace(helpResponse, '').trimLeft()
+        const client = await Client.findOne({ telegramId: clientTelegramId })
+        client.messageList.push({ sender: 'Поддержка', timestamp: dayjs(), text: responseText, telegramId: id })
+        await client.save()
         await bot.telegram.sendMessage(id === dimaID ? kostyaId : dimaID, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`, { parse_mode: 'HTML'})
-        return await bot.telegram.sendMessage(chatId, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`, { parse_mode: 'HTML'})
+        return await bot.telegram.sendMessage(clientTelegramId, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`, { parse_mode: 'HTML'})
     } catch (e) {
         fs.appendFileSync('./log.txt', JSON.stringify(e))
         return await ctx.reply('Ошибка, проверьте правильность введенной информации по паттерну [ответ поддержки] [id пользователя] [текст ответа]')

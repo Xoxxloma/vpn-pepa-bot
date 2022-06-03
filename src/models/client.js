@@ -13,6 +13,13 @@ const billSchema = new Schema({
     }
 },{ _id: false })
 
+const messageSchema = new Schema({
+    sender: String,
+    timestamp: Date,
+    text: String,
+    telegramId: Number
+})
+
 
 
 const clientSchema = new Schema({
@@ -25,6 +32,7 @@ const clientSchema = new Schema({
     paymentsHistory: {type: [billSchema], default: []},
     certificate: {type: String, default: ''},
     authCode: {type: String, default: ''},
+    messageList: {type: [messageSchema], default: []}
 })
 
 module.exports = clientSchema

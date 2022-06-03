@@ -24,6 +24,7 @@ const saveClientPayment = async (telegramId, status, res) => {
             client.isSubscriptionActive = true
             client.expiresIn = prolongueDate
             client.certificate = Buffer.from(cert)
+            await notifySupport(bot, `Приобретена подписка через приложение!\n\nПользователь ${client.name}`)
         }
 
         client.currentBill.status = status
@@ -83,10 +84,19 @@ app.post('/savePayment', async (req, res) => {
 })
 
 app.post('/messageToSupport', async (req, res) => {
-    const { message } = req.body
+    const { sender, telegramId, timestamp, text } = req.body
+    // в первой версии приложения приходит только поле месседж, чтобы не упасть - проверяем на наличие полей
+    if (!sender || !text) {
+        await notifySupport(bot, req.body.message)
+        return res.sendStatus(200)
+    }
+    const message = `#Поддержка\nСообщение от\n@${sender} с id ${telegramId}\n${text}`
+    const client = await Client.findOne({ telegramId })
+    client.messageList.push({sender, telegramId, timestamp, text})
+    client.save()
     try {
         await notifySupport(bot, message)
-        res.sendStatus(200)
+        res.send(client.messageList).status(200)
     } catch (e) {
         res.sendStatus(500)
     }
