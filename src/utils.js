@@ -10,8 +10,8 @@ dayjs.extend(isSameOrBefore)
 const createBasicBillfields = (amount) => ({
     amount,
     currency: 'RUB',
-    comment: `VPN-pepe. Оплата подписки на ${amount} рублей`,
-    expirationDateTime: qiwiApi.getLifetimeByDay(0.02),
+    comment: `Pepa VPN. Оплата подписки на ${amount} рублей`,
+    expirationDateTime: qiwiApi.getLifetimeByDay(0.01),
 });
 
 const prolongueSubscription = (currentExpiresIn, term, termUnit) => {

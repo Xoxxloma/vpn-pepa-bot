@@ -252,13 +252,13 @@ bot.hears([helpRequest, feedbackRequest], async (ctx) => {
 bot.hears(helpResponse, async(ctx) => {
     const {message: { text}} = ctx
     try {
-        const {message: {from : {id }}} = ctx
+        const {message: {from : { id }}} = ctx
         const clientTelegramId = text.match(telegramIdRegexp)[0]
         const responseText = text.replace(telegramIdRegexp, '').replace(helpResponse, '').trimLeft()
         const client = await Client.findOne({ telegramId: clientTelegramId })
         client.messageList.push({ sender: 'Поддержка', timestamp: dayjs(), text: responseText, telegramId: id })
         await client.save()
-        await bot.telegram.sendMessage(id === dimaID ? kostyaId : dimaID, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`, { parse_mode: 'HTML'})
+        await notifySupport(bot, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`)
         return await bot.telegram.sendMessage(clientTelegramId, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`, { parse_mode: 'HTML'})
     } catch (e) {
         fs.appendFileSync('./log.txt', JSON.stringify(e))

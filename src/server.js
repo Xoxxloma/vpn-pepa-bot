@@ -25,10 +25,10 @@ const saveClientPayment = async (telegramId, status, res) => {
             client.expiresIn = prolongueDate
             client.certificate = Buffer.from(cert)
             await notifySupport(bot, `Приобретена подписка через приложение!\n\nПользователь ${client.name}`)
+            client.currentBill.status = status
+            client.paymentsHistory.push(client.currentBill)
         }
 
-        client.currentBill.status = status
-        client.paymentsHistory.push(client.currentBill)
         client.currentBill = {}
         await client.save()
         return res.send({client, status: status.value}).status(200)
