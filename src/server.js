@@ -42,7 +42,6 @@ app.get('/getClientByAuthCode/:authCode', async (req, res) => {
     const authCode = req.params.authCode
     try {
         const client = await Client.findOne({ authCode })
-        console.log(client, 'client')
         if (client) {
             return res.send(client).status(200)
         }
@@ -99,6 +98,16 @@ app.post('/messageToSupport', async (req, res) => {
         res.send(client.messageList).status(200)
     } catch (e) {
         res.sendStatus(500)
+    }
+})
+
+app.get('/messageList', async (req, res) => {
+    try {
+        const { telegramId } = req.query
+        const { messageList } = await Client.findOne({ telegramId }).select('messageList')
+        res.send(messageList).status(200);
+    } catch (e) {
+        res.sendStatus(404)
     }
 })
 

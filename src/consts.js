@@ -49,9 +49,9 @@ const startInfoMessage = "<b>Добрый день, я VPN бот, рад при
     "На этом все, приятного пользования сервисом!."
 
 const faqInfoMessage = 'После оплаты бот в течение нескольких минут пришлет вам файл ******.ovpn.\n\n' +
-    'Для того чтобы начать пользоваться VPN Вам необходимо установить программу OpenVPN.\n\nСсылки на официальные источники для скачивания:\n' +
+    'Если у вас телефон на базе Android - просто скачайте наше приложение <a href="https://play.google.com/store/apps/details?id=com.pepavpn">Pepa VPN</a>\n' +
+    'В остальных случаях, для того чтобы начать пользоваться VPN Вам необходимо установить программу OpenVPN.\n\nСсылки на официальные источники для скачивания:\n' +
     '<a href="https://apps.apple.com/ru/app/openvpn-connect/id590379981">AppleStore</a>\n' +
-    '<a href="https://play.google.com/store/apps/details?id=net.openvpn.openvpn">Google Play</a>\n' +
     '<a href="https://openvpn.net/community-downloads/">Desktop</a>\n\n' +
     'Далее:\n' +
     '- скачиваете файл, присланный ботом (далее <b>Конфигурационный файл</b>)\n' +

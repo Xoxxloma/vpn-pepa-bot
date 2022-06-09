@@ -337,4 +337,12 @@ bot.hears('Контакты', async (ctx) => {
 })
 //-------------- CONTACTS BLOCK -------------- //
 
+bot.hears(/./, async (ctx) => {
+    const { message } = ctx
+    const {from : {id, username, first_name, last_name }} = message
+    const name = username ? `@${username}` : `${first_name} ${last_name ?? ''}`
+    const messageToSupport = `Сообщение от пользователя ${name} с id <b>${id}</b>\n${message.text}`
+    await notifySupport(bot, messageToSupport)
+})
+
 bot.launch()
