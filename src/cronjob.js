@@ -2,8 +2,11 @@ const { Client, conn } = require('./api')
 const { removeCertificate } = require('./utils')
 
 const expiresSubscriptionHandler = async () => {
-    const currDate = new Date().toISOString();
-    await Client.updateMany({expiresIn: {$lt: currDate}}, {isSubscriptionActive: false})
+    const today = new Date();
+    let yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1)
+
+    await Client.updateMany({expiresIn: {$lt: today, $gt: yesterday}}, {isSubscriptionActive: false})
     const collection = await Client.find({isSubscriptionActive: false})
     const promises = collection.map(user => removeCertificate(user.telegramId))
     await Promise.all(promises)

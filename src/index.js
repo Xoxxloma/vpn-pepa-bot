@@ -76,7 +76,7 @@ const paymentHandler = async (ctx, subscription) => {
     }
 
     const billId = qiwiApi.generateId()
-    const billForSubscription = createBasicBillfields(subscription.price)
+    const billForSubscription = createBasicBillfields(subscription.price, telegramId)
     const paymentDetails = await qiwiApi.createBill(billId, billForSubscription)
 
     const billToBase = { id: billId, term: subscription.term, termUnit: subscription.termUnit, expirationDateTime: billForSubscription.expirationDateTime, payUrl: paymentDetails.payUrl }

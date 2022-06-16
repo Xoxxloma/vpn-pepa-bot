@@ -17,6 +17,7 @@ const saveClientPayment = async (telegramId, status, res) => {
     const client = await Client.findOne({telegramId})
 
     try {
+        console.log(`Сохранен счет у клиента с telegramId: ${telegramId}, статус счета: ${status.value} billId: ${client.currentBill.id}`)
         if (status.value === 'PAID') {
             const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
             const certificatePath = await createCertificate(client.telegramId)
@@ -56,7 +57,8 @@ app.post('/createNewBill', async (req, res) => {
         const { subscribe, telegramId } = req.body
         const client = await Client.findOne({ telegramId })
         const billId = qiwiApi.generateId()
-        const billForSubscription = createBasicBillfields(subscribe.price)
+        console.log(`Создан новый счет у клиента с telegramId: ${telegramId}, billId: ${billId}`)
+        const billForSubscription = createBasicBillfields(subscribe.price, telegramId)
         const paymentDetails = await qiwiApi.createBill(billId, billForSubscription)
         client.currentBill = { id: billId, term: subscribe.term, termUnit: subscribe.termUnit, expirationDateTime: billForSubscription.expirationDateTime, payUrl: paymentDetails.payUrl }
         await client.save()

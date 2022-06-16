@@ -7,11 +7,11 @@ const { helpRequest, feedbackRequest, dimaID, kostyaId  } = require('./consts')
 const dayjs = require('dayjs')
 dayjs.extend(isSameOrBefore)
 
-const createBasicBillfields = (amount) => ({
+const createBasicBillfields = (amount, telegramId) => ({
     amount,
     currency: 'RUB',
-    comment: `Pepa VPN. Оплата подписки на ${amount} рублей`,
-    expirationDateTime: qiwiApi.getLifetimeByDay(0.01),
+    comment: `Pepa VPN. Оплата подписки на ${amount} рублей, по аккаунту ${telegramId}`,
+    expirationDateTime: qiwiApi.getLifetimeByDay(0.02),
 });
 
 const prolongueSubscription = (currentExpiresIn, term, termUnit) => {
