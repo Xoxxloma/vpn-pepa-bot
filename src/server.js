@@ -18,7 +18,7 @@ const saveClientPayment = async (telegramId, status, res) => {
 
     try {
         console.log(`Сохранен счет у клиента с telegramId: ${telegramId}, статус счета: ${status.value} billId: ${client.currentBill.id}`)
-        if (status.value === 'PAID') {
+        if (status.value === 'PAID' && client.currentBill.id) {
             const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
             const certificatePath = await createCertificate(client.telegramId)
             const cert = fs.readFileSync(certificatePath)
@@ -109,6 +109,19 @@ app.get('/messageList', async (req, res) => {
         const { messageList } = await Client.findOne({ telegramId }).select('messageList')
         res.send(messageList).status(200);
     } catch (e) {
+        res.sendStatus(404)
+    }
+})
+
+app.get('/userStatistics/:telegramId', async (req, res) => {
+    const telegramId = req.params.telegramId
+    try {
+        const parsedUsers = JSON.parse(fs.readFileSync('./prometheusStatistics.txt'))
+        const userReceivedBytes = parsedUsers.find(u => u.telegramId === Number.parseInt(telegramId))?.receiveBytesCount ?? 0
+        const sum = parsedUsers.reduce((acc, val) => acc + val.receiveBytesCount, 0) / parsedUsers.length
+        res.send({ userReceivedBytes, sum }).status(200)
+    } catch (e) {
+        console.log(e, 'error')
         res.sendStatus(404)
     }
 })
