@@ -20,14 +20,3 @@ module.exports = {
     bot,
     Client
 }
-
-const promises = pipipupu.map(async(s) => {
-    try {
-        await pepega()
-    } catch (e) {
-        null
-    }
-})
-
-const results = await Promise.all(promises)
-console.log(results)
