@@ -179,13 +179,14 @@ bot.command('getTrial', async (ctx) => {
     const { chat } = ctx
     const name = `${chat.first_name} ${chat.last_name || ''}`.trim()
     const findedUser = await getUserByTelegramId(telegramId)
+    const username = ctx.message.from.username || ''
 
     try {
         if (!findedUser) {
             const prolongueDate = prolongueSubscription(dayjs(), 3, "day")
             const certificatePath = await createCertificate(telegramId)
             const cert = fs.readFileSync(certificatePath)
-            const userToBase = {telegramId, name, isSubscriptionActive: true, expiresIn: prolongueDate, currentBill: {}, certificate: Buffer.from(cert)}
+            const userToBase = {telegramId, name, username, isSubscriptionActive: true, expiresIn: prolongueDate, currentBill: {}, certificate: Buffer.from(cert)}
             await Client.create(userToBase)
             await ctx.telegram.sendDocument(ctx.from.id,
                 {source: certificatePath, filename: `${telegramId}.ovpn`},
