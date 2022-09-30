@@ -1,6 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const cors = require('cors');
+const {isThatSameBill} = require("./utils");
 const {bot} = require("./api");
 const { createCertificate, prolongueSubscription, createBasicBillfields, notifySupport } = require("./utils");
 const { qiwiApi } = require("./api");
@@ -12,13 +13,37 @@ const port = 4003;
 app.use(express.json())
 app.use(cors());
 
+const config = {
+    servers: [
+        { name: 'Нидерланды', ip: '185.105.108.208 1194' },
+        { name: 'Аргентина', ip: '178.208.86.97 1194' },
+    ],
+    tariffs: {
+        "15 дней": {
+            text: '15 дней', termUnit: "day", term: 15, price: 1, description: 'Это небольшие деньги, но честные',
+        },
+        "1 месяц": {
+            text: '1 месяц', termUnit: "month", term: 1, price: 150, description: 'Между чашкой кофе и Pepa-VPN на месяц выбор очевиден',
+        },
+        "3 месяца": {
+            text: '3 месяца', termUnit: "month", term: 3, price: 400, description: 'Это как два месяца, но на один побольше',
+        },
+        "6 месяцев": {
+            text: '6 месяцев', termUnit: "month", term: 6, price: 800, description: 'Возможно у Вас в роду были лепреконы или русские олигархи, ПООООООЛГОДА PEPA-VPN',
+        },
+        "1 год": {
+            text: '1 год', termUnit: "year", term: 1, price: 3000, description: 'Подписку на год пока не продаем, только показываем. Но скоро точно будем продавать, когда нарисуем лягушку-рэпера, чтобы подчеркнуть всю роскошь и богатство этой опции',
+        },
+    }
+}
+
 const saveClientPayment = async (telegramId, status, res) => {
 
     const client = await Client.findOne({telegramId})
 
     try {
         console.log(`Сохранен счет у клиента с telegramId: ${telegramId}, статус счета: ${status.value} billId: ${client.currentBill.id}`)
-        if (status.value === 'PAID' && client.currentBill.id) {
+        if (status.value === 'PAID' && client.currentBill.billId) {
             const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
             const certificatePath = await createCertificate(client.telegramId)
             const cert = fs.readFileSync(certificatePath)
@@ -52,15 +77,22 @@ app.get('/getClientByAuthCode/:authCode', async (req, res) => {
     }
 });
 
+app.get('/getConfig', async (req, res) => {
+    res.send(config).status(200)
+})
+
 app.post('/createNewBill', async (req, res) => {
     try {
         const { subscribe, telegramId } = req.body
         const client = await Client.findOne({ telegramId })
+        if (isThatSameBill(client.currentBill, subscribe.term)) {
+            return res.send(client.currentBill).status(200)
+        }
         const billId = qiwiApi.generateId()
         console.log(`Создан новый счет у клиента с telegramId: ${telegramId}, billId: ${billId}`)
         const billForSubscription = createBasicBillfields(subscribe.price, telegramId)
         const paymentDetails = await qiwiApi.createBill(billId, billForSubscription)
-        client.currentBill = { id: billId, term: subscribe.term, termUnit: subscribe.termUnit, expirationDateTime: billForSubscription.expirationDateTime, payUrl: paymentDetails.payUrl }
+        client.currentBill = { billId, term: subscribe.term, termUnit: subscribe.termUnit, expirationDateTime: billForSubscription.expirationDateTime, payUrl: paymentDetails.payUrl }
         await client.save()
         return res.send(paymentDetails).status(200)
     } catch (e) {

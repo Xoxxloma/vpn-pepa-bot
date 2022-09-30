@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 const Schema = mongoose.Schema
 
 const billSchema = new Schema({
-    id: String,
+    billId: String,
     term: Number,
     termUnit: String,
     expirationDateTime: Date,

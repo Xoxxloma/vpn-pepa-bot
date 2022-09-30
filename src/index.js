@@ -12,7 +12,7 @@ bot.use(Telegraf.log())
 
 const operationResultPoller = async(billId, chatId, interval) => {
 
-    const client = await Client.findOne({'currentBill.id': billId })
+    const client = await Client.findOne({'currentBill.billId': billId })
 
 
     const checkCondition = async () => {
@@ -79,7 +79,7 @@ const paymentHandler = async (ctx, subscription) => {
     const billForSubscription = createBasicBillfields(subscription.price, telegramId)
     const paymentDetails = await qiwiApi.createBill(billId, billForSubscription)
 
-    const billToBase = { id: billId, term: subscription.term, termUnit: subscription.termUnit, expirationDateTime: billForSubscription.expirationDateTime, payUrl: paymentDetails.payUrl }
+    const billToBase = { billId, term: subscription.term, termUnit: subscription.termUnit, expirationDateTime: billForSubscription.expirationDateTime, payUrl: paymentDetails.payUrl }
 
     if (findedUser) {
         findedUser.currentBill = billToBase
