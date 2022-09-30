@@ -7,7 +7,7 @@ const expiresSubscriptionHandler = async () => {
     yesterday.setDate(yesterday.getDate() - 1)
 
     await Client.updateMany({expiresIn: {$lt: today, $gt: yesterday}}, {isSubscriptionActive: false})
-    const collection = await Client.find({isSubscriptionActive: false})
+    const collection = await Client.find({isSubscriptionActive: false, expiresIn: {$lt: today, $gt: yesterday}})
     const promises = collection.map(user => removeCertificate(user.telegramId))
     await Promise.all(promises)
     await conn.close()

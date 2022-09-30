@@ -71,8 +71,12 @@ app.post('/createNewBill', async (req, res) => {
 
 app.get('/pollPaymentStatus', async (req, res) => {
     const {billId} = req.query
-    const result = await qiwiApi.getBillInfo(billId)
-    return res.send(result.status)
+    try {
+        const result = await qiwiApi.getBillInfo(billId)
+        return res.send(result.status)
+    } catch (e) {
+        return res.sendStatus(404)
+    }
 })
 
 app.post('/savePayment', async (req, res) => {
