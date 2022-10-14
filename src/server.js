@@ -34,7 +34,8 @@ const config = {
         "1 год": {
             text: '1 год', termUnit: "year", term: 1, price: 3000, description: 'Подписку на год пока не продаем, только показываем. Но скоро точно будем продавать, когда нарисуем лягушку-рэпера, чтобы подчеркнуть всю роскошь и богатство этой опции',
         },
-    }
+    },
+    lastStableVersion: '1.20',
 }
 
 const saveClientPayment = async (telegramId, status, res) => {
@@ -76,6 +77,10 @@ app.get('/getClientByAuthCode/:authCode', async (req, res) => {
         return res.sendStatus(500)
     }
 });
+
+app.get('/news', async (req, res) => {
+    res.send('Первая строчка текста$SEPARATORвторая строчка текста').status(200)
+})
 
 app.get('/getConfig', async (req, res) => {
     res.send(config).status(200)
