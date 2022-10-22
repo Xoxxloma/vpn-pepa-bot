@@ -5,9 +5,11 @@ const { v4: uuidv4 } = require('uuid');
 const { basicKeyboard, subscribes, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp, dimaID, kostyaId } = require('./consts')
 const { createBasicBillfields, prolongueSubscription, getTelegramId, getUserByTelegramId, createCertificate, isThatSameBill, notifySupport, isBotBlocked, createMessagesToSupport } = require('./utils')
 const dayjs = require('dayjs')
+const {removeCertificate} = require("./utils");
 const {faqInfoMessage, downloadFrom, startInfoMessage} = require("./consts");
+const { config } = require('./config/index')
 
-
+const ips = config.servers.map((s) => s.ip)
 bot.use(Telegraf.log())
 
 const operationResultPoller = async(billId, chatId, interval) => {
@@ -25,6 +27,8 @@ const operationResultPoller = async(billId, chatId, interval) => {
                 const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
                 const certificatePath = await createCertificate(client.telegramId)
                 const cert = fs.readFileSync(certificatePath)
+                // TODO отдаем клиенту собранный серт
+                // const certToUser = cert.replaceAll('remotes_here', client.ips.join('\n'))
                 client.isSubscriptionActive = true
                 client.expiresIn = prolongueDate
                 client.certificate = Buffer.from(cert)
@@ -85,7 +89,7 @@ const paymentHandler = async (ctx, subscription) => {
         findedUser.currentBill = billToBase
         await findedUser.save()
     } else {
-        const userToBase = {telegramId, name, isSubscriptionActive: false, expiresIn: dayjs(), currentBill: billToBase}
+        const userToBase = {telegramId, name, isSubscriptionActive: false, expiresIn: dayjs(), currentBill: billToBase, ips}
         await Client.create(userToBase)
     }
 
@@ -93,7 +97,17 @@ const paymentHandler = async (ctx, subscription) => {
     return await ctx.reply(`Ваша ссылка для оплаты подписки \n${paymentDetails.payUrl}`)
 }
 
+bot.command('testAdd', async (ctx) => {
+    const telegramId = ctx.message.text.split(' ')[1]
+    const certificatePath = await createCertificate(telegramId)
+    return await ctx.reply('certificatePath: '+certificatePath)
+})
 
+bot.command('testRevoke', async (ctx) => {
+    const telegramId = ctx.message.text.split(' ')[1]
+    const certificatePath = await removeCertificate(telegramId)
+    return await ctx.reply('certificatePath: '+certificatePath)
+})
 bot.telegram.setMyCommands([{command: '/keyboard', description: 'Вызов клавиатуры бота'}])
 
 bot.use(async(ctx, next) => {
@@ -144,7 +158,7 @@ bot.command('start', async (ctx) => {
             const prolongueDate = prolongueSubscription(dayjs(), 3, "day")
             const certificatePath = await createCertificate(telegramId)
             const cert = fs.readFileSync(certificatePath)
-            const userToBase = {telegramId, name, username, expiresIn: prolongueDate, isSubscriptionActive: true, certificate: Buffer.from(cert), authCode }
+            const userToBase = {telegramId, name, username, expiresIn: prolongueDate, isSubscriptionActive: true, certificate: Buffer.from(cert), authCode, ips }
             await Client.create(userToBase)
             await bot.telegram.sendMessage(telegramId, 'Для тебя активирован триал период сроком на 3 дня. Приятного пользования!')
         }
@@ -186,7 +200,9 @@ bot.command('getTrial', async (ctx) => {
             const prolongueDate = prolongueSubscription(dayjs(), 3, "day")
             const certificatePath = await createCertificate(telegramId)
             const cert = fs.readFileSync(certificatePath)
-            const userToBase = {telegramId, name, username, isSubscriptionActive: true, expiresIn: prolongueDate, currentBill: {}, certificate: Buffer.from(cert)}
+            // TODO отдавать собранный серт на клиента
+            // const certToClient = cert.replaceAll('remotes_here', ips.join('\n'))
+            const userToBase = {telegramId, name, username, isSubscriptionActive: true, expiresIn: prolongueDate, currentBill: {}, certificate: Buffer.from(cert), ips}
             await Client.create(userToBase)
             await ctx.telegram.sendDocument(ctx.from.id,
                 {source: certificatePath, filename: `${telegramId}.ovpn`},
@@ -309,6 +325,8 @@ bot.hears('Моя подписка', async (ctx) => {
 bot.hears('Получить заново сертификат', async (ctx) => {
     const telegramId = getTelegramId(ctx)
     const findedUser = await Client.findOne({telegramId})
+    // TODO отдавать клиенту собранный серт
+    // const cert = findedUser.certificate.replaceAll('remotes_here', findedUser.ips.join('\n'))
     await bot.telegram.sendMessage(ctx.from.id, 'Используйте этот файл для импорта в openVPN, более подробно в инструкции в разделе FAQ')
     return await ctx.replyWithDocument({source: Buffer.from(findedUser.certificate), filename: `${findedUser.telegramId}.ovpn`})
 })

@@ -1,12 +1,9 @@
 const express = require('express');
 const fs = require('fs');
 const cors = require('cors');
-const {isThatSameBill} = require("./utils");
-const {bot} = require("./api");
-const { createCertificate, prolongueSubscription, createBasicBillfields, notifySupport } = require("./utils");
+const { createCertificate, prolongueSubscription, createBasicBillfields, isThatSameBill } = require("./utils");
 const { qiwiApi } = require("./api");
 const { Client } = require('./api')
-const config = require('./config/index')
 
 const app = express();
 const port = 4003;
@@ -14,12 +11,9 @@ const port = 4003;
 app.use(express.json())
 app.use(cors());
 
-
-
 const saveClientPayment = async (telegramId, status, res) => {
 
     const client = await Client.findOne({telegramId})
-
     try {
         console.log(`Сохранен счет у клиента с telegramId: ${telegramId}, статус счета: ${status.value} billId: ${client.currentBill.id}`)
         if (status.value === 'PAID' && client.currentBill.billId) {
@@ -29,7 +23,7 @@ const saveClientPayment = async (telegramId, status, res) => {
             client.isSubscriptionActive = true
             client.expiresIn = prolongueDate
             client.certificate = Buffer.from(cert)
-            await notifySupport(bot, `Приобретена подписка через приложение!\n\nПользователь ${client.name}`)
+            // await notifySupport(bot, `Приобретена подписка через приложение!\n\nПользователь ${client.name}`)
             client.currentBill.status = status
             client.paymentsHistory.push(client.currentBill)
         }
@@ -56,13 +50,13 @@ app.get('/getClientByAuthCode/:authCode', async (req, res) => {
     }
 });
 
-app.get('/news', async (req, res) => {
-    res.send('Первая строчка текста$SEPARATORвторая строчка текста').status(200)
-})
+// app.get('/news', async (req, res) => {
+//     res.send('Первая строчка текста$SEPARATORвторая строчка текста').status(200)
+// })
 
-app.get('/getConfig', async (req, res) => {
-    res.send(config).status(200)
-})
+// app.get('/getConfig', async (req, res) => {
+//     res.send(config).status(200)
+// })
 
 app.post('/createNewBill', async (req, res) => {
     try {
@@ -95,19 +89,15 @@ app.get('/pollPaymentStatus', async (req, res) => {
 })
 
 app.post('/savePayment', async (req, res) => {
-    try {
-        const {telegramId, status} = req.body
-        await saveClientPayment(telegramId, status, res)
-    } catch (e){
-        return res.sendStatus(500)
-    }
+    const {telegramId, status} = req.body
+    await saveClientPayment(telegramId, status, res)
 })
 
 app.post('/messageToSupport', async (req, res) => {
     const { sender, telegramId, timestamp, text } = req.body
     // в первой версии приложения приходит только поле месседж, чтобы не упасть - проверяем на наличие полей
     if (!sender || !text) {
-        await notifySupport(bot, req.body.message)
+        //await notifySupport(bot, req.body.message)
         return res.sendStatus(200)
     }
     const message = `#Поддержка\nСообщение от\n@${sender} с id ${telegramId}\n${text}`
@@ -115,7 +105,7 @@ app.post('/messageToSupport', async (req, res) => {
     client.messageList.push({sender, telegramId, timestamp, text})
     client.save()
     try {
-        await notifySupport(bot, message)
+        //await notifySupport(bot, message)
         res.send(client.messageList).status(200)
     } catch (e) {
         res.sendStatus(500)

@@ -32,7 +32,8 @@ const clientSchema = new Schema({
     paymentsHistory: {type: [billSchema], default: []},
     certificate: {type: String, default: ''},
     authCode: {type: String, default: ''},
-    messageList: {type: [messageSchema], default: []}
+    messageList: {type: [messageSchema], default: []},
+    ips: {type: [String], default: []}
 })
 
 module.exports = clientSchema
