@@ -85,6 +85,7 @@ const createCertificate = async (telegramId) => {
         // ---------------------------------
     } catch (e) {
         console.log(`create certificate error: ${e}`)
+        throw e;
     }
 
     return constructedPath;
