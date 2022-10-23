@@ -21,4 +21,5 @@ lerna-debug.log*
 .settings/
 *.sublime-workspace
 
-src/.env
+src/server/.env
+src/server_without_bot/.env

@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path')
-const { Client, conn } = require('./api')
+const { Client, conn } = require('../api')
 
 const shitHunter = async () => {
     const filePath = path.resolve(__dirname, 'index.txt')

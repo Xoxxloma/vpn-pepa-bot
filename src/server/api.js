@@ -1,7 +1,7 @@
 const mongoose = require('mongoose')
 const QiwiBillPaymentsAPI = require('@qiwi/bill-payments-node-js-sdk');
 const { Telegraf } = require('telegraf');
-const clientModel = require('./models/client');
+const clientModel = require('../models/client');
 require('dotenv').config();
 
 

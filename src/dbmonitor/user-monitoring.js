@@ -1,4 +1,4 @@
-const { Client, conn } = require('../api');
+const { Client, conn } = require('../server/api');
 const os = require("os");
 const fs = require('fs');
 
