@@ -3,4 +3,4 @@ const feedbackRequest = /^фидбэк/i;
 
 module.exports = {
     helpRequest, feedbackRequest
-}
+};
