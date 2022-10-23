@@ -3,11 +3,11 @@ const { qiwiApi, bot, Client } = require('./api')
 const fs = require('fs')
 const { v4: uuidv4 } = require('uuid');
 const { basicKeyboard, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp, dimaID, kostyaId } = require('./consts')
-const { createBasicBillfields, prolongueSubscription, getTelegramId, getUserByTelegramId, createCertificate, isThatSameBill, notifySupport, isBotBlocked, createMessagesToSupport } = require('./utils')
+const { createBasicBillfields, prolongateSubscription, getTelegramId, getUserByTelegramId, createCertificate, isThatSameBill, notifySupport, isBotBlocked, createMessagesToSupport } = require('./utils')
 const dayjs = require('dayjs')
 const {removeCertificate} = require("./utils");
 const {faqInfoMessage, downloadFrom, startInfoMessage} = require("./consts");
-const { config } = require('./config/index')
+const { config } = require('../config/index')
 
 const ips = config.servers.map((s) => `remote ${s.ip}`)
 const subscribes = config.tariffs
@@ -26,7 +26,7 @@ const operationResultPoller = async(billId, chatId, interval) => {
                 setTimeout(checkCondition, interval)
             }
             if (result.status.value === 'PAID') {
-                const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
+                const prolongueDate = prolongateSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
                 const certificatePath = await createCertificate(client.telegramId)
                 const cert = fs.readFileSync(certificatePath)
                 const certToUser = cert.replaceAll('$remotes_here$', client.ips.join('\n'))
@@ -157,7 +157,7 @@ bot.command('start', async (ctx) => {
             } else {
                 const { chat } = ctx
                 const name = `${chat.first_name} ${chat.last_name || ''}`.trim()
-                const prolongueDate = prolongueSubscription(dayjs(), 3, "day")
+                const prolongueDate = prolongateSubscription(dayjs(), 3, "day")
                 const certificatePath = await createCertificate(telegramId)
                 const cert = fs.readFileSync(certificatePath)
                 const userToBase = {telegramId, name, username, expiresIn: prolongueDate, isSubscriptionActive: true, certificate: Buffer.from(cert), authCode, ips }
@@ -202,7 +202,7 @@ bot.command('getTrial', async (ctx) => {
 
     try {
         if (!findedUser) {
-            const prolongueDate = prolongueSubscription(dayjs(), 3, "day")
+            const prolongueDate = prolongateSubscription(dayjs(), 3, "day")
             const certificatePath = await createCertificate(telegramId)
             const cert = fs.readFileSync(certificatePath)
             const certToClient = cert.replaceAll('$remotes_here$', ips.join('\n'))
@@ -348,7 +348,7 @@ bot.hears('FAQ', async (ctx) => {
 })
 
 bot.hears('Получить подробную инструкцию в PDF', async (ctx) => {
-    return await ctx.replyWithDocument({source: './howTo.pdf', filename: 'Инструкция.pdf'})
+    return await ctx.replyWithDocument({source: '../assets/howTo.pdf', filename: 'Инструкция.pdf'})
 })
 //-------------- FAQ BLOCK -------------- //
 

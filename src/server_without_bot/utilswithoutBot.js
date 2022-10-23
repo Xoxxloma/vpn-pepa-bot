@@ -1,14 +1,17 @@
-const {qiwiApi, Client} = require("./api");
+const {qiwiApi, Client} = require("../server/api");
 const util = require('util');
-const path = require('path')
+const path = require('path');
 const exec = util.promisify(require('child_process').exec);
-const isSameOrBefore = require('dayjs/plugin/isSameOrBefore')
-const { helpRequest, feedbackRequest, dimaID, kostyaId  } = require('./consts')
-const dayjs = require('dayjs')
-const axios = require('axios')
-dayjs.extend(isSameOrBefore)
+const isSameOrBefore = require('dayjs/plugin/isSameOrBefore');
+const { helpRequest, feedbackRequest } = require('../server/consts');
+const dayjs = require('dayjs');
+const axios = require('axios');
+dayjs.extend(isSameOrBefore);
 
-const ips = ['185.105.108.8', '178.208.66.201']
+require('dotenv').config();
+const { PATH_TO_OPENVPN_CONTROL, PATH_TO_OPENVPN_PROFILES } = process.env;
+
+const ips = ['185.105.108.8', '178.208.66.201'];
 
 const createBasicBillfields = (amount, telegramId) => ({
   amount,
@@ -17,32 +20,32 @@ const createBasicBillfields = (amount, telegramId) => ({
   expirationDateTime: qiwiApi.getLifetimeByDay(0.01),
 });
 
-const prolongueSubscription = (currentExpiresIn, term, termUnit) => {
+const prolongateSubscription = (currentExpiresIn, term, termUnit) => {
   return dayjs(currentExpiresIn).isSameOrBefore(dayjs(), "day") ? dayjs().add(term, termUnit) : dayjs(currentExpiresIn).add(term, termUnit)
-}
+};
 
-const getTelegramId = (ctx) => ctx.update.message.from.id
+const getTelegramId = (ctx) => ctx.update.message.from.id;
 
-const getUserByTelegramId = async (telegramId) => await Client.findOne({telegramId})
+const getUserByTelegramId = async (telegramId) => await Client.findOne({telegramId});
 
 const createCert = async (ipAddress, telegramId) => {
   try {
-    await axios.get(`http://${ipAddress}:1001/add?user=${telegramId}`)
-    console.log(`Remote client ${telegramId} added on ${ipAddress}`)
+    await axios.get(`http://${ipAddress}:1001/add?user=${telegramId}`);
+    console.log(`Remote client ${telegramId} added on ${ipAddress}`);
     return ipAddress
   } catch (e) {
-    console.log(`error while create cert on ${ipAddress}`)
+    console.log(`error while create cert on ${ipAddress}`);
     throw ipAddress
   }
 }
 
 const revokeCert = async (ipAddress, telegramId) => {
   try {
-    await axios.get(`http://${ipAddress}:1001/revoke?user=${telegramId}`)
-    console.log(`Remote client ${telegramId} revoked from ${ipAddress}`)
+    await axios.get(`http://${ipAddress}:1001/revoke?user=${telegramId}`);
+    console.log(`Remote client ${telegramId} revoked from ${ipAddress}`);
     return ipAddress
   } catch (e) {
-    console.log(`error while remote cert on ${ipAddress}`)
+    console.log(`error while remote cert on ${ipAddress}`);
     throw ipAddress
   }
 }
@@ -50,7 +53,7 @@ const revokeCert = async (ipAddress, telegramId) => {
 const createCertificate = async (telegramId) => {
   let constructedPath = '';
   try {
-    const { stdout, stderr, error } = await exec(`/root/openvpn-control.sh add ${telegramId}`)
+    const { stdout, stderr, error } = await exec(`${PATH_TO_OPENVPN_CONTROL} add ${telegramId}`);
     if (stderr) {
       console.log("WE ARE IN STDERR: ", stderr)
     }
@@ -58,8 +61,7 @@ const createCertificate = async (telegramId) => {
       console.log("WE ARE IN ERROR: ", error)
     }
     if (stdout) {
-      const root = path.resolve(__dirname, '..', '..')
-      constructedPath = path.join(root, `${telegramId}.ovpn`)
+      constructedPath = path.join(PATH_TO_OPENVPN_PROFILES, `${telegramId}.ovpn`)
     }
 
     // -- EXPERIMENTAL Soft migration --
@@ -87,11 +89,11 @@ const createCertificate = async (telegramId) => {
   }
 
   return constructedPath;
-}
+};
 
 const removeCertificate = async (telegramId) => {
   try {
-    const { stdout, stderr, error } = await exec(`/root/openvpn-control.sh remove ${telegramId}`)
+    const { stdout, stderr, error } = await exec(`${PATH_TO_OPENVPN_CONTROL} remove ${telegramId}`);
     if (stderr) {
       console.log("WE ARE IN STDERR: ", stderr)
     }
@@ -123,30 +125,30 @@ const removeCertificate = async (telegramId) => {
   } catch (e) {
     console.log(`remove certificate error: ${e}`)
   }
-}
+};
 
 const createMessagesToSupport = (ctx) => {
-  const { message } = ctx
-  const {from : {id, username, first_name, last_name }} = message
-  const name = username ? `@${username}` : `${first_name} ${last_name ?? ''}`
-  const isHelpRequestMessage = helpRequest.test(message.text)
-  const messageToClient = isHelpRequestMessage ? 'Ваш запрос принят, ожидайте ответ от бота, среднее время ожидания ответа - 2 часа' : 'Спасибо за ваш отзыв. Благодаря им мы становимся лучше!'
-  const messageToSupport = `${isHelpRequestMessage ? `#Поддержка` : `#Фидбэк`}\nСообщение от пользователя ${name} с id <b>${id}</b>\n${message.text.replace(isHelpRequestMessage ? helpRequest : feedbackRequest, '').trimLeft()}`
+  const { message } = ctx;
+  const {from : {id, username, first_name, last_name }} = message;
+  const name = username ? `@${username}` : `${first_name} ${last_name ?? ''}`;
+  const isHelpRequestMessage = helpRequest.test(message.text);
+  const messageToClient = isHelpRequestMessage ? 'Ваш запрос принят, ожидайте ответ от бота, среднее время ожидания ответа - 2 часа' : 'Спасибо за ваш отзыв. Благодаря им мы становимся лучше!';
+  const messageToSupport = `${isHelpRequestMessage ? `#Поддержка` : `#Фидбэк`}\nСообщение от пользователя ${name} с id <b>${id}</b>\n${message.text.replace(isHelpRequestMessage ? helpRequest : feedbackRequest, '').trimLeft()}`;
   return [messageToClient, messageToSupport]
-}
+};
 
 // const notifySupport = async (bot, message) => {
 //     await bot.telegram.sendMessage(dimaID, message, { parse_mode: 'HTML'})
 //     await bot.telegram.sendMessage(kostyaId, message, { parse_mode: 'HTML'})
 // }
 
-const isThatSameBill = (bill, term) => dayjs().isSameOrBefore(dayjs(bill.expirationDateTime)) && bill.term === term
+const isThatSameBill = (bill, term) => dayjs().isSameOrBefore(dayjs(bill.expirationDateTime)) && bill.term === term;
 
-const isBotBlocked = (e) => e?.response?.error_code === 403 && e?.response?.description === 'Forbidden: bot was blocked by the user'
+const isBotBlocked = (e) => e?.response?.error_code === 403 && e?.response?.description === 'Forbidden: bot was blocked by the user';
 
 module.exports = {
   createBasicBillfields,
-  prolongueSubscription,
+  prolongateSubscription,
   getTelegramId,
   getUserByTelegramId,
   createCertificate,
@@ -154,4 +156,4 @@ module.exports = {
   isThatSameBill,
   createMessagesToSupport,
   isBotBlocked
-}
+};
