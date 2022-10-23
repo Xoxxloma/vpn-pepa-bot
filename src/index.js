@@ -5,6 +5,7 @@ const { v4: uuidv4 } = require('uuid');
 const { basicKeyboard, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp, dimaID, kostyaId } = require('./consts')
 const { createBasicBillfields, prolongueSubscription, getTelegramId, getUserByTelegramId, createCertificate, isThatSameBill, notifySupport, isBotBlocked, createMessagesToSupport } = require('./utils')
 const dayjs = require('dayjs')
+const path = require("path");
 const {removeCertificate} = require("./utils");
 const {faqInfoMessage, downloadFrom, startInfoMessage} = require("./consts");
 const { config } = require('./config/index')
@@ -27,7 +28,12 @@ const operationResultPoller = async(billId, chatId, interval) => {
             }
             if (result.status.value === 'PAID') {
                 const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
-                const certificatePath = await createCertificate(client.telegramId)
+                let certificatePath;
+                if (client.isSubscriptionActive) {
+                    certificatePath = path.join('/root/', `${client.telegramId}.ovpn`)
+                } else {
+                    certificatePath = await createCertificate(client.telegramId)
+                }
                 const cert = fs.readFileSync(certificatePath)
                 const certToUser = cert.replaceAll('$remotes_here$', client.ips.join('\n'))
                 client.isSubscriptionActive = true

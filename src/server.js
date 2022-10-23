@@ -7,6 +7,7 @@ const { createCertificate, prolongueSubscription, createBasicBillfields, notifyS
 const { qiwiApi } = require("./api");
 const { Client } = require('./api')
 const config = require('./config/index')
+const path = require("path");
 
 const app = express();
 const port = 4003;
@@ -24,7 +25,12 @@ const saveClientPayment = async (telegramId, status, res) => {
         console.log(`Сохранен счет у клиента с telegramId: ${telegramId}, статус счета: ${status.value} billId: ${client.currentBill.id}`)
         if (status.value === 'PAID' && client.currentBill.billId) {
             const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
-            const certificatePath = await createCertificate(client.telegramId)
+            let certificatePath;
+            if (client.isSubscriptionActive) {
+                certificatePath = path.join('/root/', `${client.telegramId}.ovpn`)
+            } else {
+                certificatePath = await createCertificate(client.telegramId)
+            }
             const cert = fs.readFileSync(certificatePath)
             client.isSubscriptionActive = true
             client.expiresIn = prolongueDate

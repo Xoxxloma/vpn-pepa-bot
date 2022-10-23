@@ -60,7 +60,7 @@ const createCertificate = async (telegramId) => {
         }
         if (stdout) {
             const root = path.resolve(__dirname, '..', '..')
-            constructedPath = path.join(root, `${telegramId}.ovpn`)
+            constructedPath = path.join('/root/', `${telegramId}.ovpn`)
         }
 
         // -- EXPERIMENTAL Soft migration --
