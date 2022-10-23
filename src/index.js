@@ -10,7 +10,8 @@ const {removeCertificate} = require("./utils");
 const {faqInfoMessage, downloadFrom, startInfoMessage} = require("./consts");
 const { config } = require('./config/index')
 
-const ips = config.servers.map((s) => `remote ${s.ip}`)
+const ips = config.servers.map((s) => `${s.ip}`)
+const getIps = (arr) => arr.map((el) => `remote ${el}`)
 const subscribes = config.tariffs
 
 bot.use(Telegraf.log())
@@ -34,8 +35,16 @@ const operationResultPoller = async(billId, chatId, interval) => {
                 } else {
                     certificatePath = await createCertificate(client.telegramId)
                 }
-                const cert = fs.readFileSync(certificatePath)
-                const certToUser = cert.replaceAll('$remotes_here$', client.ips.join('\n'))
+                console.log('certificatePath',certificatePath)
+                let cert;
+                try {
+                    cert = fs.readFileSync(certificatePath, 'utf8')
+                } catch(e) {
+                    console.log(e)
+                }
+                console.log('cert',cert)
+
+                const certToUser = cert.replaceAll('$remotes_here$', getIps(client.ips).join('\n'))
                 client.isSubscriptionActive = true
                 client.expiresIn = prolongueDate
                 client.certificate = Buffer.from(cert)
@@ -44,11 +53,11 @@ const operationResultPoller = async(billId, chatId, interval) => {
                 client.currentBill = {}
                 await client.save()
                 await bot.telegram.sendDocument(chatId,
-                    {source: Buffer.from(certToUser), filename: `${client.telegramId}.ovpn`},
-                        {
-                            parse_mode: 'HTML',
-                            caption:`Успешно оплачено!\n\nТвоя подписка активна до: ${prolongueDate.format("DD.MM.YYYY")}\n\n` + downloadFrom
-                        })
+                  {source: Buffer.from(certToUser), filename: `${client.telegramId}.ovpn`},
+                  {
+                      parse_mode: 'HTML',
+                      caption:`Успешно оплачено!\n\nТвоя подписка активна до: ${prolongueDate.format("DD.MM.YYYY")}\n\n` + downloadFrom
+                  })
                 await notifySupport(bot, `Приобретена подписка через бота!\n\nПользователь ${client.name}`)
             }
             if (result.status.value === 'REJECTED') {
@@ -123,10 +132,10 @@ bot.use(async(ctx, next) => {
     if (Object.keys(subscribes).includes(messageText)) {
         await bot.telegram.sendMessage(ctx.from.id,`<b>${messageText}</b> подписки стоит <b>${subscribes[messageText].price} рублей</b>, нажми оплатить, чтобы получить ссылку для оплаты`, { parse_mode: 'HTML'})
         return await ctx.reply('Выберите опцию', Markup
-        .keyboard([[`Оплатить ${subscribes[messageText].text}`, 'Обратно к выбору подписки']])
-        .oneTime()
-        .resize()
-    )}
+          .keyboard([[`Оплатить ${subscribes[messageText].text}`, 'Обратно к выбору подписки']])
+          .oneTime()
+          .resize()
+        )}
 
     if (payText.test(messageText)) {
         const text = messageText.replace(payText, '').trimLeft()
@@ -165,7 +174,7 @@ bot.command('start', async (ctx) => {
                 const name = `${chat.first_name} ${chat.last_name || ''}`.trim()
                 const prolongueDate = prolongueSubscription(dayjs(), 3, "day")
                 const certificatePath = await createCertificate(telegramId)
-                const cert = fs.readFileSync(certificatePath)
+                const cert = fs.readFileSync(certificatePath, 'utf8')
                 const userToBase = {telegramId, name, username, expiresIn: prolongueDate, isSubscriptionActive: true, certificate: Buffer.from(cert), authCode, ips }
                 await Client.create(userToBase)
                 await bot.telegram.sendMessage(telegramId, 'Для тебя активирован триал период сроком на 3 дня. Приятного пользования!')
@@ -193,9 +202,9 @@ bot.command('start', async (ctx) => {
 
 bot.command('keyboard', async (ctx) => {
     return await ctx.reply('Выберите опцию', Markup
-        .keyboard(basicKeyboard)
-        .oneTime()
-        .resize()
+      .keyboard(basicKeyboard)
+      .oneTime()
+      .resize()
     )
 })
 
@@ -210,25 +219,25 @@ bot.command('getTrial', async (ctx) => {
         if (!findedUser) {
             const prolongueDate = prolongueSubscription(dayjs(), 3, "day")
             const certificatePath = await createCertificate(telegramId)
-            const cert = fs.readFileSync(certificatePath)
-            const certToClient = cert.replaceAll('$remotes_here$', ips.join('\n'))
+            const cert = fs.readFileSync(certificatePath, 'utf8')
+            const certToClient = cert.replaceAll('$remotes_here$', getIps(ips).join('\n'))
             const userToBase = {telegramId, name, username, isSubscriptionActive: true, expiresIn: prolongueDate, currentBill: {}, certificate: Buffer.from(cert), ips}
             await Client.create(userToBase)
             await ctx.telegram.sendDocument(ctx.from.id,
-                {source: Buffer.from(certToClient), filename: `${telegramId}.ovpn`},
-                {
-                    parse_mode: 'HTML',
-                    caption: `Твоя подписка активна до: ${prolongueDate.format("DD.MM.YYYY")}\n\n` + downloadFrom
-                })
+              {source: Buffer.from(certToClient), filename: `${telegramId}.ovpn`},
+              {
+                  parse_mode: 'HTML',
+                  caption: `Твоя подписка активна до: ${prolongueDate.format("DD.MM.YYYY")}\n\n` + downloadFrom
+              })
         } else {
             await ctx.telegram.sendMessage(ctx.from.id, 'К сожалению, услуга доступна только для новых клиентов')
             await ctx.telegram.sendSticker(ctx.from.id, 'CAACAgIAAxkBAAICJGJuVW2T3Ldh4i6q8X3xTe5pgdvAAAJeBAACierlB5mrkRLww5GWJAQ')
         }
 
         return await ctx.reply('Выберите опцию', Markup
-            .keyboard(basicKeyboard)
-            .oneTime()
-            .resize()
+          .keyboard(basicKeyboard)
+          .oneTime()
+          .resize()
         )
     } catch (e) {
         if (!isBotBlocked(e)) {
@@ -245,17 +254,17 @@ bot.command('getTrial', async (ctx) => {
 
 bot.hears(['Выбрать подписку', 'Обратно к выбору подписки'], async (ctx) => {
     return await ctx.reply('Выберите опцию', Markup
-        .keyboard([Object.keys(subscribes), ['В главное меню']])
-        .oneTime()
-        .resize()
+      .keyboard([Object.keys(subscribes), ['В главное меню']])
+      .oneTime()
+      .resize()
     )
 })
 
 bot.hears('В главное меню', async (ctx) => {
     return await ctx.reply('Выберите опцию', Markup
-        .keyboard(basicKeyboard)
-        .oneTime()
-        .resize()
+      .keyboard(basicKeyboard)
+      .oneTime()
+      .resize()
     )
 })
 
@@ -301,9 +310,9 @@ bot.action(['Good', 'Bad'], async(ctx) => {
         await bot.telegram.sendMessage(ctx.from.id, 'Благодарим за участие в опросе, очень рады что вам все нравится ❤️️️')
     } else {
         await bot.telegram.sendMessage(ctx.from.id, 'Нам крайне жаль, что у вас осталось негативное впечатление от использование сервиса.\n' +
-            'Напишите нам, что вызвало трудности и не понравилось и мы обязательно станем лучше 💔.\n' +
-            'Отправьте нам свой фидбэк на почту vpnpepa@gmail.com или же напишите боту, предложение начните со слова фидбэк.\n\n' +
-            'Например: фидбэк хотелось бы более гибкие тарифы.')
+          'Напишите нам, что вызвало трудности и не понравилось и мы обязательно станем лучше 💔.\n' +
+          'Отправьте нам свой фидбэк на почту vpnpepa@gmail.com или же напишите боту, предложение начните со слова фидбэк.\n\n' +
+          'Например: фидбэк хотелось бы более гибкие тарифы.')
     }
     await bot.telegram.editMessageReplyMarkup(from.id, message.message_id)
     await notifySupport(bot, `#Опрос\nПользователь ${userName}, оценка: #${data}`)
@@ -322,9 +331,9 @@ bot.hears('Моя подписка', async (ctx) => {
         await ctx.reply(message)
         const buttons = findedUser.isSubscriptionActive ? ['Получить заново сертификат'] : ['Выбрать подписку']
         return await ctx.reply('Выберите опцию', Markup
-            .keyboard([buttons, ['В главное меню']])
-            .oneTime()
-            .resize()
+          .keyboard([buttons, ['В главное меню']])
+          .oneTime()
+          .resize()
         )
     } catch (e) {
         fs.appendFileSync('./log.txt', JSON.stringify(e))
@@ -334,10 +343,10 @@ bot.hears('Моя подписка', async (ctx) => {
 
 bot.hears('Получить заново сертификат', async (ctx) => {
     const telegramId = getTelegramId(ctx)
-    const findedUser = await Client.findOne({telegramId})
-    const cert = findedUser.certificate.replaceAll('$remotes_here$', findedUser.ips.join('\n'))
+    const client = await Client.findOne({telegramId})
+    const cert = client.certificate.replaceAll('$remotes_here$', getIps(client.ips).join('\n'))
     await bot.telegram.sendMessage(ctx.from.id, 'Используйте этот файл для импорта в openVPN, более подробно в инструкции в разделе FAQ')
-    return await ctx.replyWithDocument({source: Buffer.from(cert), filename: `${findedUser.telegramId}.ovpn`})
+    return await ctx.replyWithDocument({source: Buffer.from(cert), filename: `${client.telegramId}.ovpn`})
 })
 
 //-------------- SUBSCRIPTION BLOCK -------------- //
@@ -347,9 +356,9 @@ bot.hears('Получить заново сертификат', async (ctx) => {
 bot.hears('FAQ', async (ctx) => {
     await bot.telegram.sendMessage(ctx.from.id, faqInfoMessage, { parse_mode: 'HTML', disable_web_page_preview: true})
     return await ctx.reply('Выберите опцию', Markup
-        .keyboard([['Получить подробную инструкцию в PDF'], ['В главное меню']])
-        .oneTime()
-        .resize()
+      .keyboard([['Получить подробную инструкцию в PDF'], ['В главное меню']])
+      .oneTime()
+      .resize()
     )
 })
 

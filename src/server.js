@@ -6,8 +6,8 @@ const {bot} = require("./api");
 const { createCertificate, prolongueSubscription, createBasicBillfields, notifySupport } = require("./utils");
 const { qiwiApi } = require("./api");
 const { Client } = require('./api')
-const config = require('./config/index')
 const path = require("path");
+const config = require('./config/index')
 
 const app = express();
 const port = 4003;
@@ -31,7 +31,7 @@ const saveClientPayment = async (telegramId, status, res) => {
             } else {
                 certificatePath = await createCertificate(client.telegramId)
             }
-            const cert = fs.readFileSync(certificatePath)
+            const cert = fs.readFileSync(certificatePath, 'utf8');
             client.isSubscriptionActive = true
             client.expiresIn = prolongueDate
             client.certificate = Buffer.from(cert)
@@ -56,7 +56,7 @@ app.get('/getClientByAuthCode/:authCode', async (req, res) => {
         if (client) {
             return res.send(client).status(200)
         }
-            return res.sendStatus(404)
+        return res.sendStatus(404)
     } catch (e) {
         return res.sendStatus(500)
     }
