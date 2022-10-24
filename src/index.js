@@ -19,7 +19,7 @@ const {
 const dayjs = require('dayjs')
 const path = require("path");
 const {faqInfoMessage, downloadFrom, startInfoMessage} = require("./consts");
-const { config } = require('./config/index')
+const config = require('./config/index')
 
 const subscribes = config.tariffs
 
@@ -46,7 +46,7 @@ const operationResultPoller = async(billId, chatId, interval) => {
                 } else {
                     const certificateData = await createCertificate(client.telegramId)
                     ips = certificateData.ips
-                    certificatePath = certificateData.constructedPath
+                    certificatePath = certificateData.certificatePath
                 }
 
                 const cert = fs.readFileSync(certificatePath, 'utf8')

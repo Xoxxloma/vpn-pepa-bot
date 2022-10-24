@@ -11,7 +11,7 @@ const config = require('./config/index')
 dayjs.extend(isSameOrBefore)
 
 const availableIps = config.servers.map((s) => s.ip)
-const availableIpsWithRemote = (arr) => arr.map((s) => `remote ${s.ip} 1194`)
+const availableIpsWithRemote = (arr) => arr.map((ip) => `remote ${ip} 1194`)
 
 const createBasicBillfields = (amount, telegramId) => ({
     amount,
@@ -51,7 +51,7 @@ const revokeCert = async (ipAddress, telegramId) => {
 }
 
 const createCertificate = async (telegramId) => {
-    let constructedPath = '';
+    let certificatePath = '';
     try {
         const { stdout, stderr, error } = await exec(`/root/openvpn-control.sh add ${telegramId}`)
         if (stderr) {
@@ -85,7 +85,7 @@ const createCertificate = async (telegramId) => {
             await notifySupport(bot, msg)
         }
 
-        return { constructedPath, ips:  result.success};
+        return { certificatePath, ips:  result.success};
         // ---------------------------------
     } catch (e) {
         console.log(`create certificate error: ${e}`)
@@ -107,7 +107,7 @@ const removeCertificate = async (telegramId) => {
             console.log("SUCCESSFULLY DELETED USER", telegramId, stdout)
         }
 
-        const promises = getAvailableIps.map(async (ip) => revokeCert(ip, telegramId))
+        const promises = availableIps.map(async (ip) => revokeCert(ip, telegramId))
         const settledValues = await Promise.allSettled(promises)
         const result = settledValues.reduce((acc, p) => {
             if (p.status === 'fulfilled') {
@@ -146,12 +146,10 @@ const notifySupport = async (bot, message) => {
 }
 
 const hasNotExpiredBillWithSameTerm = async (bill, term) => {
+    if (!bill || bill.term !== term) return false;
     try {
-        if (bill.term === term) {
-            const result = await qiwiApi.getBillInfo(bill.billId)
-            return result.status.value === 'WAITING';
-        }
-        return false
+        const result = await qiwiApi.getBillInfo(bill.billId)
+        return result.status.value === 'WAITING';
     } catch (e) {
         return false;
     }

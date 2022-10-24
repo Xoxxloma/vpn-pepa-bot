@@ -1,4 +1,4 @@
-const config = {
+module.exports = {
   servers: [
     { name: 'Нидерланды', ip: '185.105.108.208', port: '1194' },
     { name: 'Аргентина', ip: '178.208.86.97', port: '1194' },
@@ -21,8 +21,4 @@ const config = {
     },
   },
   lastStableVersion: '1.20',
-}
-
-module.exports = {
-  config
 }

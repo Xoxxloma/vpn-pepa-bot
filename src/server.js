@@ -2,7 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const cors = require('cors');
 const {bot} = require("./api");
-const { createCertificate, prolongueSubscription, createBasicBillfields, notifySupport } = require("./utils");
+const { createCertificate, prolongueSubscription, createBasicBillfields, notifySupport, hasNotExpiredBillWithSameTerm } = require("./utils");
 const { qiwiApi, Client } = require("./api");
 const path = require("path");
 const config = require('./config/index')
@@ -73,7 +73,7 @@ app.post('/createNewBill', async (req, res) => {
     try {
         const { subscribe, telegramId } = req.body
         const client = await Client.findOne({ telegramId })
-        const hasCurrentBill = await hasNotExpiredBillWithSameTerm(client.currentBill, subscription.term)
+        const hasCurrentBill = await hasNotExpiredBillWithSameTerm(client.currentBill, subscribe.term)
         if (hasCurrentBill) {
             return res.send(client.currentBill).status(200)
         }
@@ -85,6 +85,7 @@ app.post('/createNewBill', async (req, res) => {
         await client.save()
         return res.send(paymentDetails).status(200)
     } catch (e) {
+        console.log(e, 'e')
         return res.sendStatus(500)
     }
 
