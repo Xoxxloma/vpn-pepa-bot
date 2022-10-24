@@ -1,11 +1,9 @@
 const express = require('express');
 const fs = require('fs');
 const cors = require('cors');
-const {isThatSameBill} = require("./utils");
 const {bot} = require("./api");
 const { createCertificate, prolongueSubscription, createBasicBillfields, notifySupport } = require("./utils");
-const { qiwiApi } = require("./api");
-const { Client } = require('./api')
+const { qiwiApi, Client } = require("./api");
 const path = require("path");
 const config = require('./config/index')
 
@@ -51,6 +49,7 @@ const saveClientPayment = async (telegramId, status, res) => {
 
 app.get('/getClientByAuthCode/:authCode', async (req, res) => {
     const authCode = req.params.authCode
+    console.log(authCode,'code')
     try {
         const client = await Client.findOne({ authCode })
         if (client) {
@@ -74,7 +73,8 @@ app.post('/createNewBill', async (req, res) => {
     try {
         const { subscribe, telegramId } = req.body
         const client = await Client.findOne({ telegramId })
-        if (isThatSameBill(client.currentBill, subscribe.term)) {
+        const hasCurrentBill = await hasNotExpiredBillWithSameTerm(client.currentBill, subscription.term)
+        if (hasCurrentBill) {
             return res.send(client.currentBill).status(200)
         }
         const billId = qiwiApi.generateId()
@@ -132,6 +132,7 @@ app.get('/messageList', async (req, res) => {
     try {
         const { telegramId } = req.query
         const { messageList } = await Client.findOne({ telegramId }).select('messageList')
+        console.log(messageList, 'messageList before send')
         res.send(messageList).status(200);
     } catch (e) {
         res.sendStatus(404)

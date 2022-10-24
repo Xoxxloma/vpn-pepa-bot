@@ -5,9 +5,9 @@ const clientModel = require('./models/client');
 require('dotenv').config();
 
 
-const qiwiApi = new QiwiBillPaymentsAPI(process.env.QIWI_SECRET_KEY_DIMA);
-const bot = new Telegraf(process.env.TELEGRAM_TOKEN)
-const conn = mongoose.createConnection(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true  })
+const qiwiApi = new QiwiBillPaymentsAPI(process.env.QIWI_SECRET_KEY);
+const bot = new Telegraf(process.env.TEST_TELEGRAM_TOKEN)
+const conn = mongoose.createConnection(process.env.TEST_MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true  })
 
 conn.on('error', err => console.log(`Connection failed ${err}`))
 conn.once('open', () => console.log('Connected to DB!'))

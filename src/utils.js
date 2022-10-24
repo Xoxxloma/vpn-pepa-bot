@@ -7,9 +7,11 @@ const { helpRequest, feedbackRequest, dimaID, kostyaId  } = require('./consts')
 const dayjs = require('dayjs')
 const axios = require('axios')
 const {bot} = require("./api");
+const config = require('./config/index')
 dayjs.extend(isSameOrBefore)
 
-const ips = ['185.105.108.8', '178.208.66.201']
+const availableIps = config.servers.map((s) => s.ip)
+const availableIpsWithRemote = (arr) => arr.map((s) => `remote ${s.ip} 1194`)
 
 const createBasicBillfields = (amount, telegramId) => ({
     amount,
@@ -64,7 +66,7 @@ const createCertificate = async (telegramId) => {
         }
 
         // -- EXPERIMENTAL Soft migration --
-        const promises = ips.map(async (ip) => createCert(ip, telegramId))
+        const promises = availableIps.map(async (ip) => createCert(ip, telegramId))
         const settledValues = await Promise.allSettled(promises)
         const result = settledValues.reduce((acc, p) => {
             if (p.status === 'fulfilled') {
@@ -82,13 +84,14 @@ const createCertificate = async (telegramId) => {
             console.log(msg)
             await notifySupport(bot, msg)
         }
+
+        return { constructedPath, ips:  result.success};
         // ---------------------------------
     } catch (e) {
         console.log(`create certificate error: ${e}`)
         throw e;
     }
 
-    return constructedPath;
 }
 
 const removeCertificate = async (telegramId) => {
@@ -104,7 +107,7 @@ const removeCertificate = async (telegramId) => {
             console.log("SUCCESSFULLY DELETED USER", telegramId, stdout)
         }
 
-        const promises = ips.map(async (ip) => revokeCert(ip, telegramId))
+        const promises = getAvailableIps.map(async (ip) => revokeCert(ip, telegramId))
         const settledValues = await Promise.allSettled(promises)
         const result = settledValues.reduce((acc, p) => {
             if (p.status === 'fulfilled') {
@@ -142,7 +145,17 @@ const notifySupport = async (bot, message) => {
     await bot.telegram.sendMessage(kostyaId, message, { parse_mode: 'HTML'})
 }
 
-const isThatSameBill = (bill, term) => dayjs().isSameOrBefore(dayjs(bill.expirationDateTime)) && bill.term === term
+const hasNotExpiredBillWithSameTerm = async (bill, term) => {
+    try {
+        if (bill.term === term) {
+            const result = await qiwiApi.getBillInfo(bill.billId)
+            return result.status.value === 'WAITING';
+        }
+        return false
+    } catch (e) {
+        return false;
+    }
+}
 
 const isBotBlocked = (e) => e?.response?.error_code === 403 && e?.response?.description === 'Forbidden: bot was blocked by the user'
 
@@ -153,8 +166,10 @@ module.exports = {
     getUserByTelegramId,
     createCertificate,
     removeCertificate,
-    isThatSameBill,
+    hasNotExpiredBillWithSameTerm,
     notifySupport,
     createMessagesToSupport,
-    isBotBlocked
+    isBotBlocked,
+    availableIps,
+    availableIpsWithRemote
 }
