@@ -20,8 +20,6 @@ const messageSchema = new Schema({
     telegramId: Number
 })
 
-
-
 const clientSchema = new Schema({
     name: String,
     expiresIn: {type: Date, default: Date.now},
@@ -33,7 +31,8 @@ const clientSchema = new Schema({
     certificate: {type: String, default: ''},
     authCode: {type: String, default: ''},
     messageList: {type: [messageSchema], default: []},
-    ips: {type: [String], default: []}
+    ips: {type: [String], default: []},
+    appVersion: {type: String, default: ''}
 })
 
 module.exports = clientSchema

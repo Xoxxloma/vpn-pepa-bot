@@ -17,7 +17,7 @@ app.use(cors());
 
 const saveClientPayment = async (telegramId, status, res) => {
 
-    const client = await Client.findOne({telegramId})
+    const client = await Client.findOne({telegramId});
 
     try {
         console.log(`Сохранен счет у клиента с telegramId: ${telegramId}, статус счета: ${status.value} billId: ${client.currentBill.id}`)
@@ -63,11 +63,24 @@ app.get('/getClientByAuthCode/:authCode', async (req, res) => {
 
 app.get('/news', async (req, res) => {
     res.send('Первая строчка текста$SEPARATORвторая строчка текста').status(200)
-})
+});
 
 app.get('/getConfig', async (req, res) => {
     res.send(config).status(200)
-})
+});
+
+app.get('/setAppVersion', async (req, res) => {
+    const {telegramId, version} = req.query;
+    try {
+        const client = await Client.findOne({ telegramId });
+        client.appVersion = version;
+        client.save();
+
+        return res.sendStatus(200)
+    } catch (e) {
+        return res.sendStatus(500)
+    }
+});
 
 app.post('/createNewBill', async (req, res) => {
     try {
