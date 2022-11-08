@@ -390,3 +390,9 @@ bot.hears(/./, async (ctx) => {
 })
 
 bot.launch()
+
+bot.catch((err) => {
+    console.log(`bot crashed cause of ${err} DATE TIME IS ${new Date()}`)
+    bot.stop()
+    bot.launch()
+})
