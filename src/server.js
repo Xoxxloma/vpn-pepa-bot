@@ -61,6 +61,20 @@ app.get('/getClientByAuthCode/:authCode', async (req, res) => {
     }
 });
 
+app.get('/getClientByTelegramId/:telegramId', async (req, res) => {
+    const telegramId = req.params.telegramId
+
+    try {
+        const client = await Client.findOne({ telegramId })
+        if (client) {
+            return res.send(client).status(200)
+        }
+        return res.sendStatus(404)
+    } catch (e) {
+        return res.sendStatus(500)
+    }
+});
+
 app.get('/news', async (req, res) => {
     res.send('Первая строчка текста$SEPARATORвторая строчка текста').status(200)
 });
