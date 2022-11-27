@@ -24,15 +24,20 @@ const saveClientPayment = async (telegramId, status, res) => {
         if (status.value === 'PAID' && client.currentBill.billId) {
             const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
             let certificatePath;
+            let ips;
             if (client.isSubscriptionActive) {
                 certificatePath = path.join('/root/', `${client.telegramId}.ovpn`)
+                ips = client.ips
             } else {
-                certificatePath = await createCertificate(client.telegramId)
+                const certificateData = await createCertificate(client.telegramId)
+                ips = certificateData.ips
+                certificatePath = certificateData.certificatePath
             }
             const cert = fs.readFileSync(certificatePath, 'utf8');
             client.isSubscriptionActive = true
             client.expiresIn = prolongueDate
             client.certificate = Buffer.from(cert)
+            client.ips = ips
             await notifySupport(bot, `Приобретена подписка через приложение!\n\nПользователь ${client.name}`)
             client.currentBill.status = status
             client.paymentsHistory.push(client.currentBill)
