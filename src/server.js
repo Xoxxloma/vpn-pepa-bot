@@ -1,3 +1,5 @@
+const https = require('https')
+const http = require('http');
 const express = require('express');
 const fs = require('fs');
 const cors = require('cors');
@@ -9,6 +11,7 @@ const config = require('./config/index')
 
 const app = express();
 const port = 4003;
+const httpsPort = 4004
 
 app.use(express.json())
 app.use(cors());
@@ -17,27 +20,28 @@ app.use(cors());
 
 const saveClientPayment = async (telegramId, status, res) => {
 
-    const client = await Client.findOne({telegramId});
+    const client = await Client.findOne({telegramId})
 
     try {
         console.log(`Сохранен счет у клиента с telegramId: ${telegramId}, статус счета: ${status.value} billId: ${client.currentBill.id}`)
         if (status.value === 'PAID' && client.currentBill.billId) {
             const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
             let certificatePath;
-            let ips;
+            let clientips;
             if (client.isSubscriptionActive) {
                 certificatePath = path.join('/root/', `${client.telegramId}.ovpn`)
-                ips = client.ips
             } else {
-                const certificateData = await createCertificate(client.telegramId)
-                ips = certificateData.ips
-                certificatePath = certificateData.certificatePath
+                const result = await createCertificate(client.telegramId)
+                clientips = result.ips;
+                certificatePath = result.certificatePath
             }
             const cert = fs.readFileSync(certificatePath, 'utf8');
+            if (!!clientips) {
+                client.ips = clientips;
+            }
             client.isSubscriptionActive = true
             client.expiresIn = prolongueDate
             client.certificate = Buffer.from(cert)
-            client.ips = ips
             await notifySupport(bot, `Приобретена подписка через приложение!\n\nПользователь ${client.name}`)
             client.currentBill.status = status
             client.paymentsHistory.push(client.currentBill)
@@ -185,7 +189,18 @@ app.get('/userStatistics/:telegramId', async (req, res) => {
     }
 })
 
+const httpServer = http.createServer(app);
+const httpsServer = https.createServer({
+    key: fs.readFileSync("./pepavpn.ru.key"),
+    cert: fs.readFileSync("./pepavpn.ru.crt"),
+    ca: fs.readFileSync("./pepavpn.ru.ca-bundle"),
+    passphrase: process.env.CERT_PASSPHRASE
+}, app);
 
-app.listen(port, () => {
-    console.log(`User monitoring app listening on port ${port}`)
+httpServer.listen(port, () => {
+    console.log(`HTTP Server running on port ${port}`);
+});
+
+httpsServer.listen(httpsPort, () => {
+    console.log(`HTTPS Server running on port ${httpsPort}`);
 });

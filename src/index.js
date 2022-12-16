@@ -335,7 +335,10 @@ bot.hears('Моя подписка', async (ctx) => {
         const findedUser = await Client.findOne({telegramId})
         if (!findedUser) return ctx.reply('Пользователь не найден в базе')
         const message = findedUser.isSubscriptionActive ? `Срок действия подписки: ${dayjs(findedUser.expiresIn).format("DD.MM.YYYY")}г.` : 'У вас нет активной подписки'
-        await ctx.reply(message)
+        await ctx.reply(message, Markup
+          .inlineKeyboard([
+              [{text: 'Посмотреть новый личный кабинет в боте', web_app: { url: 'https://pepavpn.ru/'} }]
+          ]))
         const buttons = findedUser.isSubscriptionActive ? ['Получить заново сертификат'] : ['Выбрать подписку']
         return await ctx.reply('Выберите опцию', Markup
           .keyboard([buttons, ['В главное меню']])
@@ -387,6 +390,19 @@ bot.hears(/./, async (ctx) => {
     const name = username ? `@${username}` : `${first_name} ${last_name ?? ''}`
     const messageToSupport = `Сообщение от пользователя ${name} с id <b>${id}</b>\n${message.text}`
     await notifySupport(bot, messageToSupport)
+})
+
+bot.on('message', async(ctx) => {
+    if (ctx?.message?.web_app_data) {
+        const subscription = JSON.parse(ctx.message.web_app_data.data)
+        try {
+            await paymentHandler(ctx, subscription)
+        } catch (e) {
+            console.log(e)
+            fs.appendFileSync('./log.txt', JSON.stringify(e))
+            return await ctx.reply('Произошла ошибка, попробуйте позже')
+        }
+    }
 })
 
 bot.launch()

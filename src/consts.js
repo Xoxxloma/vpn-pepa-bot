@@ -1,4 +1,4 @@
-const basicKeyboard = [['Выбрать подписку'], ["Моя подписка"], ['FAQ', 'Контакты']]
+const basicKeyboard = [['Выбрать подписку'], ["Моя подписка"], [{text: 'Магазин подписок', web_app: { url: 'https://pepavpn.ru/shop' } }], ['FAQ', 'Контакты']]
 
 const dimaID = process.env.DIMA_TELEGRAM_ID
 const kostyaId = process.env.KOSTYA_TELEGRAM_ID
