@@ -4,8 +4,11 @@ const dayjs = require('dayjs')
 
 
 const expiresSubscriptionHandler = async () => {
+    const today = new Date();
+    let nextWeek = new Date();
+    nextWeek.setDate(nextWeek.getDate() + 6)
+    const users = await Client.find({isSubscriptionActive: true, expiresIn: {$lt: nextWeek, $gt: today }})
 
-    const users = await Client.find()
     const usersPromises = users.map(async(user) => {
         const diff = dayjs(user.expiresIn).diff(dayjs(), 'day')
         if (Boolean(reminders[diff])) {
