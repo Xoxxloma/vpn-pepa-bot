@@ -2,7 +2,7 @@ const { Markup, Telegraf } = require('telegraf');
 const { qiwiApi, bot, Client } = require('./api')
 const fs = require('fs')
 const { v4: uuidv4 } = require('uuid');
-const { basicKeyboard, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp, dimaID, kostyaId } = require('./consts')
+const { basicKeyboard, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp } = require('./consts')
 const {
     createBasicBillfields,
     prolongueSubscription,
