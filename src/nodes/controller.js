@@ -13,6 +13,7 @@ app.use((req, res, next)  => {
         next();
     } catch (e) {
         console.log(`-Error- On $req.originalUrl got error: -Error-`, e)
+        res.status(500).send(`-Error- On $req.originalUrl -Error-`)
     }
 });
 
