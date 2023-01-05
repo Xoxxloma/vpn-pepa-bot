@@ -12,17 +12,16 @@ app.use((req, res, next)  => {
     try {
         next();
     } catch (e) {
-        console.log(`-Error- On $req.originalUrl got error: -Error-`, e)
-        res.status(500).send(`-Error- On $req.originalUrl -Error-`)
+        console.log(`-Error- On ${req.originalUrl} got error: -Error-`, e)
+        res.status(500).send(`-Error- On ${req.originalUrl} -Error-`)
     }
 });
-
 app.get('/revoke', async function (req, res) {
     var userid = req.query.user;
     var response = '';
     var status = 200;
 
-    console.log(`-Revoke- On $userid starting revoke -Revoke-`)
+    console.log(`-Revoke- On ${userid} starting revoke -Revoke-`)
 
     const { stdout, stderr, error } = await exec(`/home/vpn/openvpn-control.sh remove ${userid}`)
     //|| stderr.indexOf('is not a valid certificate') != -1
@@ -45,7 +44,7 @@ app.get('/add', async function (req, res) {
     var response = '';
     var status = 200;
 
-    console.log(`-Add- On $userid starting add -Add-`)
+    console.log(`-Add- On ${userid} starting add -Add-`)
 
     const { stdout, stderr, error } = await exec(`/home/vpn/openvpn-control.sh add ${userid}`)
     if (error || stdout.indexOf('already found') !== -1) {
