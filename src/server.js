@@ -85,7 +85,8 @@ app.get('/getClientByTelegramId/:telegramId', async (req, res) => {
 });
 
 app.get('/news', async (req, res) => {
-    res.send('Первая строчка текста$SEPARATORвторая строчка текста').status(200)
+    // res.send('Первая строчка текста$SEPARATORвторая строчка текста').status(200)
+    res.send('').status(200)
 });
 
 app.get('/getConfig', async (req, res) => {

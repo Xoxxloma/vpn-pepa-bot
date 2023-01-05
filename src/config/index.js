@@ -5,7 +5,7 @@ module.exports = {
   ],
   tariffs: {
     "15 дней": {
-      text: '15 дней', termUnit: "day", term: 15, price: 1, description: 'Это небольшие деньги, но честные',
+      text: '15 дней', termUnit: "day", term: 15, price: 85, description: 'Это небольшие деньги, но честные',
     },
     "1 месяц": {
       text: '1 месяц', termUnit: "month", term: 1, price: 150, description: 'Между чашкой кофе и Pepa-VPN на месяц выбор очевиден',
@@ -17,8 +17,8 @@ module.exports = {
       text: '6 месяцев', termUnit: "month", term: 6, price: 800, description: 'Возможно у Вас в роду были лепреконы или русские олигархи, ПООООООЛГОДА PEPA-VPN',
     },
     "1 год": {
-      text: '1 год', termUnit: "year", term: 1, price: 3000, description: 'Подписку на год пока не продаем, только показываем. Но скоро точно будем продавать, когда нарисуем лягушку-рэпера, чтобы подчеркнуть всю роскошь и богатство этой опции',
+      text: '1 год', termUnit: "year", term: 1, price: 1500, description: 'Ни одно словосочетание не сможет в полной мере описать преимущества данной опции, 1 год/365 дней/8760 часов/525600 минут/более 31 миллиона секунд впна.',
     },
   },
-  lastStableVersion: '1.20',
+  lastStableVersion: '1.24',
 }
