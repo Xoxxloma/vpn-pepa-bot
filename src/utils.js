@@ -17,7 +17,7 @@ const createBasicBillfields = (amount, telegramId) => ({
     amount,
     currency: 'RUB',
     comment: `Pepa VPN. Оплата подписки на ${amount} рублей, по аккаунту ${telegramId}`,
-    expirationDateTime: qiwiApi.getLifetimeByDay(0.6),
+    expirationDateTime: qiwiApi.getLifetimeByDay(0.01),
 });
 
 const prolongueSubscription = (currentExpiresIn, term, termUnit) => {

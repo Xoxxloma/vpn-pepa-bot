@@ -24,6 +24,7 @@ const clientSchema = new Schema({
     name: String,
     expiresIn: {type: Date, default: Date.now},
     username: {type: String, default: ''},
+    // TODO изменить на BIGINT???
     telegramId: Number,
     isSubscriptionActive: {type: Boolean, default: false},
     currentBill: {type: billSchema, default: {} },

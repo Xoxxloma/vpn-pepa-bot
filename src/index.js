@@ -42,7 +42,6 @@ const operationResultPoller = async(billId, chatId, interval) => {
                 let ips;
                 if (client.isSubscriptionActive) {
                     certificatePath = path.join('/root/', `${client.telegramId}.ovpn`)
-                    ips = client.ips
                 } else {
                     const certificateData = await createCertificate(client.telegramId)
                     ips = certificateData.ips
@@ -50,13 +49,17 @@ const operationResultPoller = async(billId, chatId, interval) => {
                 }
 
                 const cert = fs.readFileSync(certificatePath, 'utf8')
-                const certToUser = cert.replaceAll('$remotes_here$', availableIpsWithRemote(ips).join('\n'))
+                let certToUser = cert
+
+                if (!!ips) {
+                    client.ips = ips
+                    certToUser = cert.replaceAll('$remotes_here$', availableIpsWithRemote(ips).join('\n'))
+                }
                 client.isSubscriptionActive = true
                 client.expiresIn = prolongueDate
                 client.certificate = Buffer.from(cert)
                 client.currentBill.status = result.status
                 client.paymentsHistory.push(client.currentBill)
-                client.ips = ips
                 client.currentBill = {}
                 await client.save()
                 await bot.telegram.sendDocument(chatId,

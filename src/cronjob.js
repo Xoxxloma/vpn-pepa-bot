@@ -6,10 +6,8 @@ const { removeCertificate } = require('./utils')
 
 const expiresSubscriptionHandler = async () => {
     const today = new Date();
-    today.setHours(today.getHours() + 13)
     let yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1)
-    yesterday.setHours(yesterday.getHours() + 13)
 
     console.log('today: ', today)
     console.log('yesterday: ', yesterday)
