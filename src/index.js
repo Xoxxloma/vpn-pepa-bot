@@ -39,7 +39,8 @@ const operationResultPoller = async(billId, chatId, interval) => {
             if (result.status.value === 'PAID') {
                 const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
                 let certificatePath;
-                let ips;
+                let ips = client.ips;
+
                 if (client.isSubscriptionActive) {
                     certificatePath = path.join('/root/', `${client.telegramId}.ovpn`)
                 } else {
@@ -358,8 +359,18 @@ bot.hears('Получить заново сертификат', async (ctx) => {
     const telegramId = getTelegramId(ctx)
     const client = await Client.findOne({telegramId})
     const cert = client.certificate.replaceAll('$remotes_here$', availableIpsWithRemote(client.ips).join('\n'))
-    await bot.telegram.sendMessage(ctx.from.id, 'Используйте этот файл для импорта в openVPN, более подробно в инструкции в разделе FAQ')
-    return await ctx.replyWithDocument({source: Buffer.from(cert), filename: `${client.telegramId}.ovpn`})
+    await ctx.telegram.sendDocument(ctx.from.id,
+      {source: Buffer.from(cert), filename: `${telegramId}.ovpn`},
+      {
+          parse_mode: 'HTML',
+          caption: 'Используйте этот файл для импорта в openVPN, более подробно в инструкции в разделе FAQ'
+      })
+
+    return await ctx.reply('Выберите опцию', Markup
+      .keyboard([['В главное меню']])
+      .oneTime()
+      .resize()
+    )
 })
 
 //-------------- SUBSCRIPTION BLOCK -------------- //
@@ -382,8 +393,16 @@ bot.hears('Получить подробную инструкцию в PDF', asy
 
 
 //-------------- CONTACTS BLOCK -------------- //
-bot.hears('Контакты', async (ctx) => {
-    return await ctx.reply('По всем вопросам на почту vpnpepa@gmail.com или напиши боту, свое сообщение начните со слова ПОМОЩЬ и далее текст своего вопроса.\n\nНапример: помощь не пришел впн профиль.')
+bot.hears('О нас', async (ctx) => {
+    await bot.telegram.sendMessage(ctx.from.id, '<b>VPN Сервис "Pepa VPN"</b>\n' +
+      'ИНН: 561018707588\nПубличная оферта появится позже\n\n' +
+      'По всем вопросам обращайтесь на почту vpnpepa@gmail.com или просто напишите в бота - мы обязательно ответим.' , { parse_mode: 'HTML' })
+
+    return await ctx.reply('Выберите опцию', Markup
+      .keyboard([['В главное меню']])
+      .oneTime()
+      .resize()
+    )
 })
 //-------------- CONTACTS BLOCK -------------- //
 
