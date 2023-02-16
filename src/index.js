@@ -64,11 +64,11 @@ const operationResultPoller = async(billId, chatId, interval) => {
                 client.currentBill = {}
                 await client.save()
                 await bot.telegram.sendDocument(chatId,
-                  {source: Buffer.from(certToUser), filename: `${client.telegramId}.ovpn`},
-                  {
-                      parse_mode: 'HTML',
-                      caption:`Успешно оплачено!\n\nТвоя подписка активна до: ${prolongueDate.format("DD.MM.YYYY")}\n\n` + downloadFrom
-                  })
+                    {source: Buffer.from(certToUser), filename: `${client.telegramId}.ovpn`},
+                    {
+                        parse_mode: 'HTML',
+                        caption:`Успешно оплачено!\n\nТвоя подписка активна до: ${prolongueDate.format("DD.MM.YYYY")}\n\n` + downloadFrom
+                    })
                 await notifySupport(bot, `Приобретена подписка через бота!\n\nПользователь ${client.name}`)
             }
             if (result.status.value === 'REJECTED') {
@@ -86,7 +86,7 @@ const operationResultPoller = async(billId, chatId, interval) => {
                 await bot.telegram.sendMessage(chatId, 'Срок оплаты счета истек, если потребуется - создайте новый')
             }
         }  catch (e) {
-            console.log(e)
+            console.log('Error in checkCondition: ', e)
             fs.appendFileSync('./log.txt', JSON.stringify(e))
             if (!isBotBlocked(e)) {
                 await bot.telegram.sendMessage(chatId, 'Произошла ошибка, повторите попытку позже или напишите нам')
@@ -143,9 +143,9 @@ bot.use(async(ctx, next) => {
     if (Object.keys(subscribes).includes(messageText)) {
         await bot.telegram.sendMessage(ctx.from.id,`<b>${messageText}</b> подписки стоит <b>${subscribes[messageText].price} рублей</b>, нажми оплатить, чтобы получить ссылку для оплаты`, { parse_mode: 'HTML'})
         return await ctx.reply('Выберите опцию', Markup
-          .keyboard([[`Оплатить ${subscribes[messageText].text}`, 'Обратно к выбору подписки']])
-          .oneTime()
-          .resize()
+            .keyboard([[`Оплатить ${subscribes[messageText].text}`, 'Обратно к выбору подписки']])
+            .oneTime()
+            .resize()
         )}
 
     if (payText.test(messageText)) {
@@ -154,7 +154,7 @@ bot.use(async(ctx, next) => {
         try {
             await paymentHandler(ctx, subscription)
         } catch (e) {
-            console.log(e)
+            console.log('Error in bot.use', e)
             fs.appendFileSync('./log.txt', JSON.stringify(e))
             return await ctx.reply('Произошла ошибка, попробуйте позже')
         }
@@ -201,21 +201,22 @@ bot.command('start', async (ctx) => {
             )
             await bot.telegram.sendMessage(ctx.from.id, "Для тебя активна <b>бесплатная подписка на 3 дня\n<tg-spoiler>/getTrial</tg-spoiler> !</b> Попробуй, понравится - присоединяйся :)", { parse_mode: 'HTML' })
             return await ctx.reply('Выберите опцию', Markup
-              .keyboard(basicKeyboard)
-              .oneTime()
-              .resize()
+                .keyboard(basicKeyboard)
+                .oneTime()
+                .resize()
             )
         }
     } catch (e) {
+        console.log('Error on Start', e)
         await bot.telegram.sendMessage(ctx.from.id, "Произошла ошибка, попробуйте позднее")
     }
 })
 
 bot.command('keyboard', async (ctx) => {
     return await ctx.reply('Выберите опцию', Markup
-      .keyboard(basicKeyboard)
-      .oneTime()
-      .resize()
+        .keyboard(basicKeyboard)
+        .oneTime()
+        .resize()
     )
 })
 
@@ -235,22 +236,23 @@ bot.command('getTrial', async (ctx) => {
             const userToBase = {telegramId, name, username, isSubscriptionActive: true, expiresIn: prolongueDate, currentBill: {}, certificate: Buffer.from(cert), ips}
             await Client.create(userToBase)
             await ctx.telegram.sendDocument(ctx.from.id,
-              {source: Buffer.from(certToClient), filename: `${telegramId}.ovpn`},
-              {
-                  parse_mode: 'HTML',
-                  caption: `Твоя подписка активна до: ${prolongueDate.format("DD.MM.YYYY")}\n\n` + downloadFrom
-              })
+                {source: Buffer.from(certToClient), filename: `${telegramId}.ovpn`},
+                {
+                    parse_mode: 'HTML',
+                    caption: `Твоя подписка активна до: ${prolongueDate.format("DD.MM.YYYY")}\n\n` + downloadFrom
+                })
         } else {
             await ctx.telegram.sendMessage(ctx.from.id, 'К сожалению, услуга доступна только для новых клиентов')
             await ctx.telegram.sendSticker(ctx.from.id, 'CAACAgIAAxkBAAICJGJuVW2T3Ldh4i6q8X3xTe5pgdvAAAJeBAACierlB5mrkRLww5GWJAQ')
         }
 
         return await ctx.reply('Выберите опцию', Markup
-          .keyboard(basicKeyboard)
-          .oneTime()
-          .resize()
+            .keyboard(basicKeyboard)
+            .oneTime()
+            .resize()
         )
     } catch (e) {
+        console.log('Error on get trial', e)
         if (!isBotBlocked(e)) {
             await ctx.telegram.sendMessage(ctx.from.id, 'Что то пошло не так, попробуйте позднее')
         }
@@ -265,17 +267,17 @@ bot.command('getTrial', async (ctx) => {
 
 bot.hears(['Выбрать подписку', 'Обратно к выбору подписки'], async (ctx) => {
     return await ctx.reply('Выберите опцию', Markup
-      .keyboard([Object.keys(subscribes), ['В главное меню']])
-      .oneTime()
-      .resize()
+        .keyboard([Object.keys(subscribes), ['В главное меню']])
+        .oneTime()
+        .resize()
     )
 })
 
 bot.hears('В главное меню', async (ctx) => {
     return await ctx.reply('Выберите опцию', Markup
-      .keyboard(basicKeyboard)
-      .oneTime()
-      .resize()
+        .keyboard(basicKeyboard)
+        .oneTime()
+        .resize()
     )
 })
 
@@ -291,6 +293,7 @@ bot.hears([helpRequest, feedbackRequest], async (ctx) => {
         await notifySupport(bot, messageToSupport)
         return await ctx.reply(messageToClient)
     } catch (e) {
+        console.log('Error in help feedback', e)
         fs.appendFileSync('./log.txt', JSON.stringify(e))
         return await ctx.reply('Произошла ошибка, попробуйте снова')
     }
@@ -308,6 +311,7 @@ bot.hears(helpResponse, async(ctx) => {
         await notifySupport(bot, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`)
         return await bot.telegram.sendMessage(clientTelegramId, `#Поддержка\n<b>Ответ службы поддержки</b>\n${responseText}`, { parse_mode: 'HTML'})
     } catch (e) {
+        console.log('Error in helpResponse', e)
         fs.appendFileSync('./log.txt', JSON.stringify(e))
         return await ctx.reply('Ошибка, проверьте правильность введенной информации по паттерну [ответ поддержки] [id пользователя] [текст ответа]')
     }
@@ -321,9 +325,9 @@ bot.action(['Good', 'Bad'], async(ctx) => {
         await bot.telegram.sendMessage(ctx.from.id, 'Благодарим за участие в опросе, очень рады что вам все нравится ❤️️️')
     } else {
         await bot.telegram.sendMessage(ctx.from.id, 'Нам крайне жаль, что у вас осталось негативное впечатление от использование сервиса.\n' +
-          'Напишите нам, что вызвало трудности и не понравилось и мы обязательно станем лучше 💔.\n' +
-          'Отправьте нам свой фидбэк на почту vpnpepa@gmail.com или же напишите боту, предложение начните со слова фидбэк.\n\n' +
-          'Например: фидбэк хотелось бы более гибкие тарифы.')
+            'Напишите нам, что вызвало трудности и не понравилось и мы обязательно станем лучше 💔.\n' +
+            'Отправьте нам свой фидбэк на почту vpnpepa@gmail.com или же напишите боту, предложение начните со слова фидбэк.\n\n' +
+            'Например: фидбэк хотелось бы более гибкие тарифы.')
     }
     await bot.telegram.editMessageReplyMarkup(from.id, message.message_id)
     await notifySupport(bot, `#Опрос\nПользователь ${userName}, оценка: #${data}`)
@@ -340,16 +344,17 @@ bot.hears('Моя подписка', async (ctx) => {
         if (!findedUser) return ctx.reply('Пользователь не найден в базе')
         const message = findedUser.isSubscriptionActive ? `Срок действия подписки: ${dayjs(findedUser.expiresIn).format("DD.MM.YYYY")}г.` : 'У вас нет активной подписки'
         await ctx.reply(message, Markup
-          .inlineKeyboard([
-              [{text: 'Посмотреть новый личный кабинет в боте', web_app: { url: 'https://pepavpn.ru/'} }]
-          ]))
+            .inlineKeyboard([
+                [{text: 'Посмотреть новый личный кабинет в боте', web_app: { url: 'https://pepavpn.ru/'} }]
+            ]))
         const buttons = findedUser.isSubscriptionActive ? ['Получить заново сертификат'] : ['Выбрать подписку']
         return await ctx.reply('Выберите опцию', Markup
-          .keyboard([buttons, ['В главное меню']])
-          .oneTime()
-          .resize()
+            .keyboard([buttons, ['В главное меню']])
+            .oneTime()
+            .resize()
         )
     } catch (e) {
+        console.log('Error in Моя подписка', e)
         fs.appendFileSync('./log.txt', JSON.stringify(e))
         return ctx.reply("Произошла ошибка, попробуйте позднее")
     }
@@ -380,9 +385,9 @@ bot.hears('Получить заново сертификат', async (ctx) => {
 bot.hears('FAQ', async (ctx) => {
     await bot.telegram.sendMessage(ctx.from.id, faqInfoMessage, { parse_mode: 'HTML', disable_web_page_preview: true})
     return await ctx.reply('Выберите опцию', Markup
-      .keyboard([['Получить подробную инструкцию в PDF'], ['В главное меню']])
-      .oneTime()
-      .resize()
+        .keyboard([['Получить подробную инструкцию в PDF'], ['В главное меню']])
+        .oneTime()
+        .resize()
     )
 })
 
@@ -420,7 +425,7 @@ bot.on('message', async(ctx) => {
         try {
             await paymentHandler(ctx, subscription)
         } catch (e) {
-            console.log(e)
+            console.log('Error on message', e)
             fs.appendFileSync('./log.txt', JSON.stringify(e))
             return await ctx.reply('Произошла ошибка, попробуйте позже')
         }
