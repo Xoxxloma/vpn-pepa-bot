@@ -101,7 +101,7 @@ const paymentHandler = async (ctx, subscription) => {
     const { chat } = ctx
     const name = `${chat.first_name} ${chat.last_name || ''}`.trim()
     const findedUser = await getUserByTelegramId(telegramId)
-    const hasCurrentBill = await hasNotExpiredBillWithSameTerm(findedUser.currentBill, subscription.term)
+    const hasCurrentBill = await hasNotExpiredBillWithSameTerm(findedUser?.currentBill, subscription.term)
     if (findedUser && hasCurrentBill) {
         return await ctx.reply(`Ваша ссылка для оплаты подписки\n${findedUser?.currentBill?.payUrl}`)
     }
