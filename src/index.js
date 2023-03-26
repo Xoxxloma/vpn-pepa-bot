@@ -2,7 +2,7 @@ const { Markup, Telegraf } = require('telegraf');
 const { qiwiApi, bot, Client } = require('./api')
 const fs = require('fs')
 const { v4: uuidv4 } = require('uuid');
-const { basicKeyboard, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp } = require('./consts')
+const { basicKeyboard, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp, webAppButton } = require('./consts')
 const {
     createBasicBillfields,
     prolongueSubscription,
@@ -100,6 +100,7 @@ const paymentHandler = async (ctx, subscription) => {
     const telegramId = getTelegramId(ctx)
     const { chat } = ctx
     const name = `${chat.first_name} ${chat.last_name || ''}`.trim()
+    const username = chat.username || ""
     const findedUser = await getUserByTelegramId(telegramId)
     const hasCurrentBill = await hasNotExpiredBillWithSameTerm(findedUser?.currentBill, subscription.term)
     if (findedUser && hasCurrentBill) {
@@ -116,7 +117,7 @@ const paymentHandler = async (ctx, subscription) => {
         findedUser.currentBill = billToBase
         await findedUser.save()
     } else {
-        const userToBase = {telegramId, name, isSubscriptionActive: false, expiresIn: dayjs(), currentBill: billToBase}
+        const userToBase = {telegramId, name, username, isSubscriptionActive: false, expiresIn: dayjs(), currentBill: billToBase}
         await Client.create(userToBase)
     }
 
@@ -138,7 +139,6 @@ bot.command('testRevoke', async (ctx) => {
 bot.telegram.setMyCommands([{command: '/keyboard', description: 'Вызов клавиатуры бота'}])
 
 bot.use(async(ctx, next) => {
-
     const messageText = ctx.update.message?.text
     if (Object.keys(subscribes).includes(messageText)) {
         await bot.telegram.sendMessage(ctx.from.id,`<b>${messageText}</b> подписки стоит <b>${subscribes[messageText].price} рублей</b>, нажми оплатить, чтобы получить ссылку для оплаты`, { parse_mode: 'HTML'})
@@ -166,12 +166,12 @@ bot.use(async(ctx, next) => {
 //-------------- COMMANDS BLOCK -------------- //
 
 bot.command('start', async (ctx) => {
+    const telegramId = getTelegramId(ctx)
+    const findedUser = await Client.findOne({ telegramId })
     try {
         if (ctx.message.text.includes('auth')) {
             const authCode = uuidv4()
-            const telegramId = getTelegramId(ctx)
             const username = ctx.update.message.from.username
-            const findedUser = await Client.findOne({ telegramId })
             if (findedUser) {
                 if (findedUser.authCode) {
                     await bot.telegram.sendMessage(telegramId, 'Используй этот код для регистрации в приложении')
@@ -192,19 +192,27 @@ bot.command('start', async (ctx) => {
             }
             await bot.telegram.sendMessage(telegramId, 'Используй этот код для регистрации в приложении')
             return await ctx.reply(authCode)
-
         } else {
-            await bot.telegram.sendPhoto(
-              ctx.from.id,
-              'AgACAgIAAxkBAAIMwGJubUyAb1RGDkmlt2YVLS-LwerHAAI1uDEbchFwS3mlZ3Pg0niAAQADAgADeQADJAQ',
-              {parse_mode: 'HTML', caption: startInfoMessage}
-            )
-            await bot.telegram.sendMessage(ctx.from.id, "Для тебя активна <b>бесплатная подписка на 3 дня\n<tg-spoiler>/getTrial</tg-spoiler> !</b> Попробуй, понравится - присоединяйся :)", { parse_mode: 'HTML' })
-            return await ctx.reply('Выберите опцию', Markup
-                .keyboard(basicKeyboard)
-                .oneTime()
-                .resize()
-            )
+            if (findedUser) {
+                await ctx.reply("Я рад снова вас видеть, с возвращением!")
+                return await ctx.reply('Выберите опцию', Markup
+                  .keyboard(basicKeyboard)
+                  .oneTime()
+                  .resize()
+                )
+            } else {
+                await bot.telegram.sendPhoto(
+                  ctx.from.id,
+                  'AgACAgIAAxkBAAIMwGJubUyAb1RGDkmlt2YVLS-LwerHAAI1uDEbchFwS3mlZ3Pg0niAAQADAgADeQADJAQ',
+                  {parse_mode: 'HTML', caption: startInfoMessage}
+                )
+                await bot.telegram.sendMessage(ctx.from.id, "Для тебя активна <b>бесплатная подписка на 3 дня\n<tg-spoiler>/getTrial</tg-spoiler> !</b> Попробуй, понравится - присоединяйся :)", { parse_mode: 'HTML' })
+                return await ctx.reply('Выберите опцию', Markup
+                  .keyboard(basicKeyboard)
+                  .oneTime()
+                  .resize()
+                )
+            }
         }
     } catch (e) {
         console.log('Error on Start', e)
@@ -316,23 +324,6 @@ bot.hears(helpResponse, async(ctx) => {
         return await ctx.reply('Ошибка, проверьте правильность введенной информации по паттерну [ответ поддержки] [id пользователя] [текст ответа]')
     }
 })
-
-bot.action(['Good', 'Bad'], async(ctx) => {
-    const { data, from, message } = ctx.update.callback_query
-    const userName = from.username ? `@${from.username}` : `${from.first_name} ${from.last_name ?? ''}`
-
-    if (data === 'Good') {
-        await bot.telegram.sendMessage(ctx.from.id, 'Благодарим за участие в опросе, очень рады что вам все нравится ❤️️️')
-    } else {
-        await bot.telegram.sendMessage(ctx.from.id, 'Нам крайне жаль, что у вас осталось негативное впечатление от использование сервиса.\n' +
-            'Напишите нам, что вызвало трудности и не понравилось и мы обязательно станем лучше 💔.\n' +
-            'Отправьте нам свой фидбэк на почту vpnpepa@gmail.com или же напишите боту, предложение начните со слова фидбэк.\n\n' +
-            'Например: фидбэк хотелось бы более гибкие тарифы.')
-    }
-    await bot.telegram.editMessageReplyMarkup(from.id, message.message_id)
-    await notifySupport(bot, `#Опрос\nПользователь ${userName}, оценка: #${data}`)
-})
-
 //-------------- SUPPORT BLOCK -------------- //
 
 //-------------- SUBSCRIPTION BLOCK -------------- //
@@ -341,12 +332,23 @@ bot.hears('Моя подписка', async (ctx) => {
     try {
         const telegramId = ctx.update.message.from.id
         const findedUser = await Client.findOne({telegramId})
-        if (!findedUser) return ctx.reply('Пользователь не найден в базе')
-        const message = findedUser.isSubscriptionActive ? `Срок действия подписки: ${dayjs(findedUser.expiresIn).format("DD.MM.YYYY")}г.` : 'У вас нет активной подписки'
-        await ctx.reply(message, Markup
-            .inlineKeyboard([
-                [{text: 'Посмотреть новый личный кабинет в боте', web_app: { url: 'https://pepavpn.ru/'} }]
-            ]))
+        if (!findedUser) {
+            await ctx.telegram.sendMessage(telegramId, 'Не можем найти вас среди наших клиентов, давайте исправим это недоразумение?)')
+            return await ctx.reply('Выберите опцию', Markup
+              .keyboard([[webAppButton], ['В главное меню']])
+              .oneTime()
+              .resize()
+            )
+        }
+        if (findedUser.isSubscriptionActive) {
+            await ctx.reply(`Срок действия подписки: ${dayjs(findedUser.expiresIn).format("DD.MM.YYYY")}г.` , Markup
+              .inlineKeyboard([
+                  [{text: 'Посмотреть новый личный кабинет в боте', web_app: { url: 'https://pepavpn.ru/'} }]
+              ]))
+        } else {
+            await ctx.reply('У вас нет активной подписки')
+        }
+
         const buttons = findedUser.isSubscriptionActive ? ['Получить заново сертификат'] : ['Выбрать подписку']
         return await ctx.reply('Выберите опцию', Markup
             .keyboard([buttons, ['В главное меню']])
@@ -368,7 +370,7 @@ bot.hears('Получить заново сертификат', async (ctx) => {
       {source: Buffer.from(cert), filename: `${telegramId}.ovpn`},
       {
           parse_mode: 'HTML',
-          caption: 'Используйте этот файл для импорта в openVPN, более подробно в инструкции в разделе FAQ'
+          caption: 'Используйте этот файл для импорта в openVPN, более подробную информацию можно найти в разделе Инструкция'
       })
 
     return await ctx.reply('Выберите опцию', Markup
@@ -382,7 +384,7 @@ bot.hears('Получить заново сертификат', async (ctx) => {
 
 //-------------- FAQ BLOCK -------------- //
 
-bot.hears('FAQ', async (ctx) => {
+bot.hears('Инструкция', async (ctx) => {
     await bot.telegram.sendMessage(ctx.from.id, faqInfoMessage, { parse_mode: 'HTML', disable_web_page_preview: true})
     return await ctx.reply('Выберите опцию', Markup
         .keyboard([['Получить подробную инструкцию в PDF'], ['В главное меню']])
@@ -431,6 +433,11 @@ bot.on('message', async(ctx) => {
     if (ctx?.message?.web_app_data) {
         const subscription = JSON.parse(ctx.message.web_app_data.data)
         try {
+            const { message } = ctx
+            const {from : {id, username, first_name, last_name }} = message
+            const name = username ? `@${username}` : `${first_name} ${last_name ?? ''}`
+            const messageToSupport = `Сообщение от пользователя ${name} с id <b>${id}</b>\n${message.web_app_data.data}`
+            await notifySupport(bot, messageToSupport)
             await paymentHandler(ctx, subscription)
         } catch (e) {
             console.log('Error on message', e)
@@ -447,3 +454,20 @@ bot.catch((err) => {
     bot.stop()
     bot.launch()
 })
+
+
+// bot.action(['Good', 'Bad'], async(ctx) => {
+//     const { data, from, message } = ctx.update.callback_query
+//     const userName = from.username ? `@${from.username}` : `${from.first_name} ${from.last_name ?? ''}`
+//
+//     if (data === 'Good') {
+//         await bot.telegram.sendMessage(ctx.from.id, 'Благодарим за участие в опросе, очень рады что вам все нравится ❤️️️')
+//     } else {
+//         await bot.telegram.sendMessage(ctx.from.id, 'Нам крайне жаль, что у вас осталось негативное впечатление от использование сервиса.\n' +
+//             'Напишите нам, что вызвало трудности и не понравилось и мы обязательно станем лучше 💔.\n' +
+//             'Отправьте нам свой фидбэк на почту vpnpepa@gmail.com или же напишите боту, предложение начните со слова фидбэк.\n\n' +
+//             'Например: фидбэк хотелось бы более гибкие тарифы.')
+//     }
+//     await bot.telegram.editMessageReplyMarkup(from.id, message.message_id)
+//     await notifySupport(bot, `#Опрос\nПользователь ${userName}, оценка: #${data}`)
+// })
