@@ -1,0 +1,13 @@
+{
+  "name": "vpn-imoney-ex",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "^0.26.1",
+    "md5": "*.*",
+    "qs": "*.*"
+  },
+  "author": "",
+  "license": "ISC"
+}
