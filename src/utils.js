@@ -28,6 +28,11 @@ const getTelegramId = (ctx) => ctx.update.message.from.id
 
 const getUserByTelegramId = async (telegramId) => await Client.findOne({telegramId})
 
+const getUserName = (message) => {
+    const {from : { username, first_name, last_name }} = message
+    return username ? `@${username}` : `${first_name} ${last_name ?? ''}`
+}
+
 const createCert = async (ipAddress, telegramId) => {
     try {
         await axios.get(`http://${ipAddress}:1001/add?user=${telegramId}`)
@@ -61,7 +66,7 @@ const createCertificate = async (telegramId) => {
             console.log("WE ARE IN ERROR: ", error)
         }
         if (stdout) {
-            const root = path.resolve(__dirname, '..', '..')
+            //const root = path.resolve(__dirname, '..', '..')
             certificatePath = path.join('/root/', `${telegramId}.ovpn`)
         }
 
@@ -132,17 +137,21 @@ const removeCertificate = async (telegramId) => {
 
 const createMessagesToSupport = (ctx) => {
     const { message } = ctx
-    const {from : {id, username, first_name, last_name }} = message
-    const name = username ? `@${username}` : `${first_name} ${last_name ?? ''}`
+    const name = getUserName(message)
     const isHelpRequestMessage = helpRequest.test(message.text)
     const messageToClient = isHelpRequestMessage ? 'Ваш запрос принят, ожидайте ответ от бота, среднее время ожидания ответа - 2 часа' : 'Спасибо за ваш отзыв. Благодаря им мы становимся лучше!'
-    const messageToSupport = `${isHelpRequestMessage ? `#Поддержка` : `#Фидбэк`}\nСообщение от пользователя ${name} с id <b>${id}</b>\n${message.text.replace(isHelpRequestMessage ? helpRequest : feedbackRequest, '').trimLeft()}`
+    const messageToSupport = `${isHelpRequestMessage ? `#Поддержка` : `#Фидбэк`}\nСообщение от пользователя ${name} с id <b>${message.from.id}</b>\n${message.text.replace(isHelpRequestMessage ? helpRequest : feedbackRequest, '').trimLeft()}`
     return [messageToClient, messageToSupport]
 }
 
 const notifySupport = async (bot, message) => {
     await bot.telegram.sendMessage(dimaID, message, { parse_mode: 'HTML'})
     await bot.telegram.sendMessage(kostyaId, message, { parse_mode: 'HTML'})
+}
+
+const sendPhotoToSupport = async (bot, photoId, extra) => {
+    await bot.telegram.sendPhoto(dimaID, photoId, extra)
+    await bot.telegram.sendPhoto(kostyaId, photoId, extra)
 }
 
 const hasNotExpiredBillWithSameTerm = async (bill, term) => {
@@ -162,12 +171,14 @@ module.exports = {
     prolongueSubscription,
     getTelegramId,
     getUserByTelegramId,
+    getUserName,
     createCertificate,
     removeCertificate,
     hasNotExpiredBillWithSameTerm,
     notifySupport,
+    sendPhotoToSupport,
     createMessagesToSupport,
     isBotBlocked,
     availableIps,
-    availableIpsWithRemote
+    availableIpsWithRemote,
 }

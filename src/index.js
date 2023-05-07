@@ -8,8 +8,10 @@ const {
     prolongueSubscription,
     getTelegramId,
     getUserByTelegramId,
+    getUserName,
     createCertificate,
     notifySupport,
+    sendPhotoToSupport,
     isBotBlocked,
     createMessagesToSupport,
     availableIpsWithRemote,
@@ -362,22 +364,74 @@ bot.hears('Моя подписка', async (ctx) => {
     }
 })
 
-bot.hears('Получить заново сертификат', async (ctx) => {
+bot.hears(['Получить заново сертификат', 'Обратно к выбору сервера'], async (ctx) => {
     const telegramId = getTelegramId(ctx)
-    const client = await Client.findOne({telegramId})
-    const cert = client.certificate.replaceAll('$remotes_here$', availableIpsWithRemote(client.ips).join('\n'))
-    await ctx.telegram.sendDocument(ctx.from.id,
-      {source: Buffer.from(cert), filename: `${telegramId}.ovpn`},
-      {
-          parse_mode: 'HTML',
-          caption: 'Используйте этот файл для импорта в openVPN, более подробную информацию можно найти в разделе Инструкция'
-      })
+    try {
+        const client = await Client.findOne({telegramId})
+        const bttns = config.servers.filter((s) => client.ips.includes(s.ip)).map((s) => [s.name])
 
-    return await ctx.reply('Выберите опцию', Markup
-      .keyboard([['В главное меню']])
-      .oneTime()
-      .resize()
-    )
+        if (!bttns.length) {
+            await ctx.telegram.sendDocument(ctx.from.id,
+              {source: Buffer.from(client.certificate), filename: `${telegramId}.ovpn`},
+              {
+                  parse_mode: 'HTML',
+                  caption: 'Кажется у вас всего один доступный сервер, вот ваш сертификат :) Если Вам кажется, что здесь должно было быть больше опций - обратитесь в службу поддержки и мы Вам поможем.'
+              })
+        } else {
+            return await ctx.reply('Выберите сервер из списка ниже и мы сформируем сертификат', Markup
+              .keyboard([...bttns, ['В главное меню']])
+              .oneTime()
+              .resize()
+            )
+        }
+    } catch (e) {
+        console.log('Error in Получить заново сертификат', e)
+        fs.appendFileSync('./log.txt', JSON.stringify(e))
+        return ctx.reply("Произошла ошибка, попробуйте позднее или обратитесь в поддержку, мы обязательно Вам поможем.")
+    }
+})
+
+bot.hears(config.servers.map(s => s.name), async (ctx) => {
+    const serverName = ctx?.message?.text
+    const telegramId = getTelegramId(ctx)
+    try {
+        const client = await Client.findOne({telegramId})
+        const pickedInstance = config.servers.find((s) => s.name === serverName)
+        if (!pickedInstance) {
+            return await ctx.reply('Произошла чудовищная ошибка и мы не распознали желаемый сервер, выберите новый или обратитесь в поддержку', Markup
+              .keyboard([['Обратно к выбору сервера'], ['В главное меню']])
+              .oneTime()
+              .resize()
+            )
+        }
+        let cert = ''
+        if (pickedInstance.protocol === 'tcp') {
+            cert = client.certificate
+              .replace('explicit-exit-notify', '')
+              .replace('udp', 'tcp')
+              .replace('$remotes_here$', `remote ${pickedInstance.ip} ${pickedInstance.port}`)
+
+        } else {
+            cert = client.certificate.replace('$remotes_here$', `remote ${pickedInstance.ip} ${pickedInstance.port} ${pickedInstance.protocol}`)
+        }
+
+        await ctx.telegram.sendDocument(ctx.from.id,
+          {source: Buffer.from(cert), filename: `${telegramId}_${serverName}.ovpn`},
+          {
+              parse_mode: 'HTML',
+              caption: `Вот он с пылу с жару, мудрость и опыт поколений сжатый до одного текстового файла. Вы же точно хотели сервер ${serverName}? Надеемся мы ничего там внутри не перепутали.`
+          })
+
+        return await ctx.reply('Выберите опцию', Markup
+          .keyboard([['Обратно к выбору сервера'], ['В главное меню']])
+          .oneTime()
+          .resize()
+        )
+    } catch (e) {
+        console.log('Error in Выбор сертификата', e)
+        fs.appendFileSync('./log.txt', JSON.stringify(e))
+        return ctx.reply("Произошла ошибка, попробуйте позднее или обратитесь в поддержку, мы обязательно Вам поможем.")
+    }
 })
 
 //-------------- SUBSCRIPTION BLOCK -------------- //
@@ -423,9 +477,8 @@ bot.hears('О нас', async (ctx) => {
 
 bot.hears(/./, async (ctx) => {
     const { message } = ctx
-    const {from : {id, username, first_name, last_name }} = message
-    const name = username ? `@${username}` : `${first_name} ${last_name ?? ''}`
-    const messageToSupport = `Сообщение от пользователя ${name} с id <b>${id}</b>\n${message.text}`
+    const name = getUserName(message)
+    const messageToSupport = `Сообщение от пользователя ${name} с id <b>${message.from.id}</b>\n${message.text}`
     await notifySupport(bot, messageToSupport)
 })
 
@@ -444,6 +497,12 @@ bot.on('message', async(ctx) => {
             fs.appendFileSync('./log.txt', JSON.stringify(e))
             return await ctx.reply('Произошла ошибка, попробуйте позже')
         }
+    }
+    if (ctx?.message?.photo) {
+        const photo = ctx.message.photo[ctx.message.photo.length - 1]
+        const name = getUserName(ctx.message)
+        const caption = `Фото от пользователя ${name} с id <b>${ctx.message.from.id}</b>\n${ctx.message?.caption || ''}`
+        await sendPhotoToSupport(bot, photo.file_id, {caption, parse_mode: "HTML"} )
     }
 })
 
