@@ -16,44 +16,35 @@ const httpsPort = 4004
 app.use(express.json())
 app.use(cors());
 
-
-
-const saveClientPayment = async (telegramId, status, res) => {
-
+const saveClientPayment = async (telegramId, status, context = 'приложение') => {
     const client = await Client.findOne({telegramId})
-
-    try {
-        console.log(`Сохранен счет у клиента с telegramId: ${telegramId}, статус счета: ${status.value} billId: ${client.currentBill.id}`)
-        if (status.value === 'PAID' && client.currentBill.billId) {
-            const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
-            let certificatePath;
-            let clientips;
-            if (client.isSubscriptionActive) {
-                certificatePath = path.join('/root/', `${client.telegramId}.ovpn`)
-            } else {
-                const result = await createCertificate(client.telegramId)
-                clientips = result.ips;
-                certificatePath = result.certificatePath
-            }
-            const cert = fs.readFileSync(certificatePath, 'utf8');
-            if (!!clientips) {
-                client.ips = clientips;
-            }
-            client.isSubscriptionActive = true
-            client.expiresIn = prolongueDate
-            client.certificate = Buffer.from(cert)
-            await notifySupport(bot, `Приобретена подписка через приложение!\n\nПользователь ${client.name}`)
-            client.currentBill.status = status
-            client.paymentsHistory.push(client.currentBill)
+    console.log(`Сохранен счет у клиента с telegramId: ${telegramId}, статус счета: ${status.value} billId: ${client.currentBill.billId}`)
+    if (status.value === 'PAID' && client.currentBill.billId) {
+        const prolongueDate = prolongueSubscription(client.expiresIn, client.currentBill.term, client.currentBill.termUnit)
+        let certificatePath;
+        let clientips;
+        if (client.isSubscriptionActive) {
+            certificatePath = path.join('/root/', `${client.telegramId}.ovpn`)
+        } else {
+            const result = await createCertificate(client.telegramId)
+            clientips = result.ips;
+            certificatePath = result.certificatePath
         }
-
-        client.currentBill = {}
-        await client.save()
-        return res.send({client, status: status.value}).status(200)
-    }  catch (e) {
-        console.log(e)
-        return res.sendStatus(500)
+        const cert = fs.readFileSync(certificatePath, 'utf8');
+        if (!!clientips) {
+            client.ips = clientips;
+        }
+        client.isSubscriptionActive = true
+        client.expiresIn = prolongueDate
+        client.certificate = Buffer.from(cert)
+        await notifySupport(bot, `Приобретена подписка через ${context}!\n\nПользователь ${client.name}, telegramId: ${telegramId}`)
+        client.currentBill.status = status
+        client.paymentsHistory.push(client.currentBill)
     }
+
+    client.currentBill = {}
+    await client.save()
+    return {client, status: status.value}
 }
 
 app.get('/getClientByAuthCode/:authCode', async (req, res) => {
@@ -69,6 +60,17 @@ app.get('/getClientByAuthCode/:authCode', async (req, res) => {
         return res.sendStatus(500)
     }
 });
+
+app.post('/createUser', async (req, res) => {
+    const client = await Client.create(req.body)
+    res.send(client).status(200)
+})
+
+app.post('/updateUser', async (req, res) => {
+    const {telegramId, user} = req.body
+    const client = await Client.updateOne({ telegramId }, {...user})
+    res.send(client).status(200)
+})
 
 app.get('/getClientByTelegramId/:telegramId', async (req, res) => {
     const telegramId = req.params.telegramId
@@ -110,7 +112,7 @@ app.post('/createNewBill', async (req, res) => {
     try {
         const { subscribe, telegramId } = req.body
         const client = await Client.findOne({ telegramId })
-        const hasCurrentBill = await hasNotExpiredBillWithSameTerm(client.currentBill, subscribe.term)
+        const hasCurrentBill = await hasNotExpiredBillWithSameTerm(client?.currentBill, subscribe.term)
         if (hasCurrentBill) {
             return res.send(client.currentBill).status(200)
         }
@@ -140,9 +142,11 @@ app.get('/pollPaymentStatus', async (req, res) => {
 
 app.post('/savePayment', async (req, res) => {
     try {
-        const {telegramId, status} = req.body
-        await saveClientPayment(telegramId, status, res)
+        const {telegramId, status, context} = req.body
+        const result = await saveClientPayment(telegramId, status, context)
+        res.send(result).status(200)
     } catch (e){
+        console.log(e)
         return res.sendStatus(500)
     }
 })
@@ -191,17 +195,17 @@ app.get('/userStatistics/:telegramId', async (req, res) => {
 })
 
 const httpServer = http.createServer(app);
-const httpsServer = https.createServer({
-    key: fs.readFileSync("./pepavpn.ru.key"),
-    cert: fs.readFileSync("./pepavpn.ru.crt"),
-    ca: fs.readFileSync("./pepavpn.ru.ca-bundle"),
-    passphrase: process.env.CERT_PASSPHRASE
-}, app);
+// const httpsServer = https.createServer({
+//     key: fs.readFileSync("./pepavpn.ru.key"),
+//     cert: fs.readFileSync("./pepavpn.ru.crt"),
+//     ca: fs.readFileSync("./pepavpn.ru.ca-bundle"),
+//     passphrase: process.env.CERT_PASSPHRASE
+// }, app);
 
 httpServer.listen(port, () => {
     console.log(`HTTP Server running on port ${port}`);
 });
 
-httpsServer.listen(httpsPort, () => {
-    console.log(`HTTPS Server running on port ${httpsPort}`);
-});
+// httpsServer.listen(httpsPort, () => {
+//     console.log(`HTTPS Server running on port ${httpsPort}`);
+// });

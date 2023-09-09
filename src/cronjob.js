@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path')
 const axios = require('axios')
+const {availableIps} = require("./utils");
 const { Client, conn } = require('./api')
 const { removeCertificate } = require('./utils')
 
@@ -31,9 +32,14 @@ const syncIndex = async () => {
         const filePath = path.resolve('/etc/openvpn/easy-rsa/pki/index.txt')
         const fileData = fs.readFileSync(filePath, 'utf-8');
 
+        const promises = availableIps.map(async (ip) => {
+            await axios.post(`http://${ip}:1001/syncIndex`, { fileData });
+        })
+        await Promise.all(promises)
         // TODO: Убрать хардкод айпишников
-        await axios.post('http://185.105.108.8:1001/syncIndex', { fileData });
-        await axios.post('http://178.208.66.201:1001/syncIndex', { fileData });
+        // await axios.post('http://185.105.108.8:1001/syncIndex', { fileData });
+        // await axios.post('http://178.208.66.182:1001/syncIndex', { fileData });
+        // await axios.post('http://194.190.152.98:1001/syncIndex', { fileData });
 
     } catch (e) {
         console.log(`error in sync`, e)
@@ -84,3 +90,20 @@ const revokeFromBase = (terminalList) => {
 }
 
 expiresSubscriptionHandler()
+
+// const syncIndex = async () => {
+//     try {
+//         const filePath = path.resolve('/etc/openvpn/easy-rsa/pki/index.txt')
+//         const fileData = fs.readFileSync(filePath, 'utf-8');
+//         const serverIps = config.servers.map(async (s) => {
+//             await axios.post(`http://${s.ip}:1001/syncIndex`, { fileData });
+//         })
+//         await Promise.all(serverIps)
+//         // TODO: Убрать хардкод айпишников
+//         // await axios.post('http://185.105.108.8:1001/syncIndex', { fileData });
+//         // await axios.post('http://178.208.66.201:1001/syncIndex', { fileData });
+//
+//     } catch (e) {
+//         console.log(`error in sync`, e)
+//     }
+// }

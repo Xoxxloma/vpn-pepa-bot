@@ -1,6 +1,7 @@
 const {qiwiApi, Client} = require("./api");
 const util = require('util');
 const path = require('path')
+const { v4: uuidv4 } = require('uuid');
 const exec = util.promisify(require('child_process').exec);
 const isSameOrBefore = require('dayjs/plugin/isSameOrBefore')
 const { helpRequest, feedbackRequest, dimaID, kostyaId  } = require('./consts')
@@ -31,6 +32,22 @@ const getUserByTelegramId = async (telegramId) => await Client.findOne({telegram
 const getUserName = (message) => {
     const {from : { username, first_name, last_name }} = message
     return username ? `@${username}` : `${first_name} ${last_name ?? ''}`
+}
+
+const createUserFields = async (ctx) => {
+    const { chat } = ctx
+    const authCode = uuidv4()
+    const telegramId = getTelegramId(ctx)
+    const username = ctx.update.message.from.username
+    const name = `${chat.first_name} ${chat.last_name || ''}`.trim()
+    const expiresIn = prolongueSubscription(dayjs(), 3, "day")
+    // TODO вернуть назад после теста
+    // const { certificatePath, ips } = await createCertificate(telegramId)
+    // const certificate = fs.readFileSync(certificatePath, 'utf8')
+    const certificate = 'this is cert and remotes will be there $remotes_here$'
+    const ips = [1, 2 ,3]
+    const userToBase = {telegramId, name, username, expiresIn, isSubscriptionActive: true, certificate, authCode, ips }
+    return userToBase
 }
 
 const createCert = async (ipAddress, telegramId) => {
@@ -181,4 +198,5 @@ module.exports = {
     isBotBlocked,
     availableIps,
     availableIpsWithRemote,
+    createUserFields
 }
