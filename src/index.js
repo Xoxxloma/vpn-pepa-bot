@@ -452,23 +452,14 @@ bot.hears('Получить подробную инструкцию в PDF', asy
 })
 //-------------- FAQ BLOCK -------------- //
 
-bot.hears('Pepa VPN Оферта', async (ctx) => {
-    await ctx.telegram.sendDocument(ctx.from.id, {source: './offer.docx', filename: `Pepa VPN оферта.docx`})
-    return await ctx.reply('Выберите опцию', Markup
-      .keyboard([['В главное меню']])
-      .oneTime()
-      .resize()
-    )
-})
-
 //-------------- CONTACTS BLOCK -------------- //
 bot.hears('О нас', async (ctx) => {
     await bot.telegram.sendMessage(ctx.from.id, '<b>VPN Сервис "Pepa VPN"</b>\n' +
-      'ИНН: 561018707588\nПубличная оферта доступна для скачивания по кнопке ниже\n\n' +
+      'Когда то основаны, чтобы когда то прекратить существование. Мчимся словно бабочка сознанья из ниоткуда в никуда\n\n' +
       'По всем вопросам обращайтесь на почту vpnpepa@gmail.com или просто напишите в бота - мы обязательно ответим.' , { parse_mode: 'HTML' })
 
     return await ctx.reply('Выберите опцию', Markup
-      .keyboard([['Pepa VPN Оферта'], ['В главное меню']])
+      .keyboard([['В главное меню']])
       .oneTime()
       .resize()
     )
