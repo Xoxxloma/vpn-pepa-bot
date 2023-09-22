@@ -6,7 +6,7 @@ module.exports = {
   ],
   tariffs: {
     "15 дней": {
-      text: '15 дней', termUnit: "day", term: 15, price: 1, description: 'Это небольшие деньги, но честные',
+      text: '15 дней', termUnit: "day", term: 15, price: 85, description: 'Это небольшие деньги, но честные',
     },
     "1 месяц": {
       text: '1 месяц', termUnit: "month", term: 1, price: 150, description: 'Между чашкой кофе и Pepa-VPN на месяц выбор очевиден',

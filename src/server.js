@@ -194,17 +194,17 @@ app.get('/userStatistics/:telegramId', async (req, res) => {
 })
 
 const httpServer = http.createServer(app);
-// const httpsServer = https.createServer({
-//     key: fs.readFileSync("./pepavpn.ru.key"),
-//     cert: fs.readFileSync("./pepavpn.ru.crt"),
-//     ca: fs.readFileSync("./pepavpn.ru.ca-bundle"),
-//     passphrase: process.env.CERT_PASSPHRASE
-// }, app);
+const httpsServer = https.createServer({
+    key: fs.readFileSync("./pepavpn.ru.key"),
+    cert: fs.readFileSync("./pepavpn.ru.crt"),
+    ca: fs.readFileSync("./pepavpn.ru.ca-bundle"),
+    passphrase: process.env.CERT_PASSPHRASE
+}, app);
 
 httpServer.listen(port, () => {
     console.log(`HTTP Server running on port ${port}`);
 });
 
-// httpsServer.listen(httpsPort, () => {
-//     console.log(`HTTPS Server running on port ${httpsPort}`);
-// });
+httpsServer.listen(httpsPort, () => {
+    console.log(`HTTPS Server running on port ${httpsPort}`);
+});
