@@ -4,10 +4,8 @@ const fs = require('fs')
 const { v4: uuidv4 } = require('uuid');
 const { basicKeyboard, helpRequest, helpResponse, feedbackRequest, payText, telegramIdRegexp, webAppButton } = require('./consts')
 const {
-    createBasicBillfields,
     prolongueSubscription,
     getTelegramId,
-    getUserByTelegramId,
     getUserName,
     createCertificate,
     notifySupport,
@@ -15,7 +13,6 @@ const {
     isBotBlocked,
     createMessagesToSupport,
     availableIpsWithRemote,
-    hasNotExpiredBillWithSameTerm,
     removeCertificate,
     createUserFields
 } = require('./utils')
@@ -116,9 +113,8 @@ bot.use(async(ctx, next) => {
 
 bot.command('start', async (ctx) => {
     const telegramId = getTelegramId(ctx)
-    const { data: findedUser } = await axios.get(`http://localhost:4003/getClientByTelegramId/${telegramId}`)
-    // const findedUser = await Client.findOne({ telegramId })
     try {
+        const { data: findedUser } = await axios.get(`http://localhost:4003/getClientByTelegramId/${telegramId}`)
         if (ctx.message.text.includes('auth')) {
             if (findedUser) {
                 if (findedUser.authCode) {
@@ -133,8 +129,7 @@ bot.command('start', async (ctx) => {
             } else {
                 const userFields = await createUserFields(ctx)
                 await axios.post('http://localhost:4003/createUser', userFields)
-                await bot.telegram.sendMessage(telegramId, 'Для тебя активирован триал период сроком на 3 дня. Приятного пользования!')
-                await bot.telegram.sendMessage(telegramId, 'Используй этот код для регистрации в приложении')
+                await bot.telegram.sendMessage(telegramId, 'Для тебя активирован триал период сроком на 3 дня.\nИспользуй код ниже, для регистрации в приложении.\nПриятного пользования!')
                 return await ctx.reply(userFields.authCode)
             }
         } else {
@@ -146,11 +141,11 @@ bot.command('start', async (ctx) => {
                   .resize()
                 )
             } else {
-                // await bot.telegram.sendPhoto(
-                //   ctx.from.id,
-                //   'AgACAgIAAxkBAAIMwGJubUyAb1RGDkmlt2YVLS-LwerHAAI1uDEbchFwS3mlZ3Pg0niAAQADAgADeQADJAQ',
-                //   {parse_mode: 'HTML', caption: startInfoMessage}
-                // )
+                await bot.telegram.sendPhoto(
+                  ctx.from.id,
+                  'AgACAgIAAxkBAAIMwGJubUyAb1RGDkmlt2YVLS-LwerHAAI1uDEbchFwS3mlZ3Pg0niAAQADAgADeQADJAQ',
+                  {parse_mode: 'HTML', caption: startInfoMessage}
+                )
                 const userFields = await createUserFields(ctx)
                 await axios.post('http://localhost:4003/createUser', userFields)
                 const certToClient = userFields.certificate.replaceAll('$remotes_here$', availableIpsWithRemote(userFields.ips).join('\n'))
@@ -283,7 +278,6 @@ bot.hears(['Выбор сервера', 'Обратно к выбору серв
     try {
         const { data: client } = await axios.get(`http://localhost:4003/getClientByTelegramId/${telegramId}`)
         const bttns = config.servers.filter((s) => client.ips.includes(s.ip)).map((s) => [s.name])
-
         if (!bttns.length) {
             await ctx.telegram.sendDocument(ctx.from.id,
               {source: Buffer.from(client.certificate), filename: `${telegramId}.ovpn`},
@@ -366,23 +360,14 @@ bot.hears('Получить подробную инструкцию в PDF', asy
 })
 //-------------- FAQ BLOCK -------------- //
 
-bot.hears('Pepa VPN Оферта', async (ctx) => {
-    await ctx.telegram.sendDocument(ctx.from.id, {source: './offer.docx', filename: `Pepa VPN оферта.docx`})
-    return await ctx.reply('Выберите опцию', Markup
-      .keyboard([['В главное меню']])
-      .oneTime()
-      .resize()
-    )
-})
-
 //-------------- CONTACTS BLOCK -------------- //
 bot.hears('О нас', async (ctx) => {
     await bot.telegram.sendMessage(ctx.from.id, '<b>VPN Сервис "Pepa VPN"</b>\n' +
-      'ИНН: 561018707588\nПубличная оферта доступна для скачивания по кнопке ниже\n\n' +
+      'Когда то основаны, чтобы когда то прекратить существование. Мчимся словно бабочка сознанья из ниоткуда в никуда\n\n' +
       'По всем вопросам обращайтесь на почту vpnpepa@gmail.com или просто напишите в бота - мы обязательно ответим.' , { parse_mode: 'HTML' })
 
     return await ctx.reply('Выберите опцию', Markup
-      .keyboard([['Pepa VPN Оферта'], ['В главное меню']])
+      .keyboard([['В главное меню']])
       .oneTime()
       .resize()
     )
@@ -436,20 +421,3 @@ bot.catch((err) => {
     bot.stop()
     bot.launch()
 })
-
-
-// bot.action(['Good', 'Bad'], async(ctx) => {
-//     const { data, from, message } = ctx.update.callback_query
-//     const userName = from.username ? `@${from.username}` : `${from.first_name} ${from.last_name ?? ''}`
-//
-//     if (data === 'Good') {
-//         await bot.telegram.sendMessage(ctx.from.id, 'Благодарим за участие в опросе, очень рады что вам все нравится ❤️️️')
-//     } else {
-//         await bot.telegram.sendMessage(ctx.from.id, 'Нам крайне жаль, что у вас осталось негативное впечатление от использование сервиса.\n' +
-//             'Напишите нам, что вызвало трудности и не понравилось и мы обязательно станем лучше 💔.\n' +
-//             'Отправьте нам свой фидбэк на почту vpnpepa@gmail.com или же напишите боту, предложение начните со слова фидбэк.\n\n' +
-//             'Например: фидбэк хотелось бы более гибкие тарифы.')
-//     }
-//     await bot.telegram.editMessageReplyMarkup(from.id, message.message_id)
-//     await notifySupport(bot, `#Опрос\nПользователь ${userName}, оценка: #${data}`)
-// })

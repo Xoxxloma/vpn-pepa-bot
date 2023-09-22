@@ -25,10 +25,12 @@ const saveClientPayment = async (telegramId, status, context = 'приложен
         let clientips;
         if (client.isSubscriptionActive) {
             certificatePath = path.join('/root/', `${client.telegramId}.ovpn`)
+            console.log('we are in case when we read created cert', certificatePath)
         } else {
             const result = await createCertificate(client.telegramId)
             clientips = result.ips;
             certificatePath = result.certificatePath
+            console.log('we are in case when we create new cert', certificatePath)
         }
         const cert = fs.readFileSync(certificatePath, 'utf8');
         if (!!clientips) {
@@ -77,10 +79,7 @@ app.get('/getClientByTelegramId/:telegramId', async (req, res) => {
 
     try {
         const client = await Client.findOne({ telegramId })
-        if (client) {
-            return res.send(client).status(200)
-        }
-        return res.sendStatus(404)
+        res.send(client).status(200)
     } catch (e) {
         return res.sendStatus(500)
     }

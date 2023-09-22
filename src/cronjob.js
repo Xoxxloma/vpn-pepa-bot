@@ -36,11 +36,6 @@ const syncIndex = async () => {
             await axios.post(`http://${ip}:1001/syncIndex`, { fileData });
         })
         await Promise.all(promises)
-        // TODO: Убрать хардкод айпишников
-        // await axios.post('http://185.105.108.8:1001/syncIndex', { fileData });
-        // await axios.post('http://178.208.66.182:1001/syncIndex', { fileData });
-        // await axios.post('http://194.190.152.98:1001/syncIndex', { fileData });
-
     } catch (e) {
         console.log(`error in sync`, e)
     }

@@ -41,11 +41,8 @@ const createUserFields = async (ctx) => {
     const username = ctx.update.message.from.username
     const name = `${chat.first_name} ${chat.last_name || ''}`.trim()
     const expiresIn = prolongueSubscription(dayjs(), 3, "day")
-    // TODO вернуть назад после теста
-    // const { certificatePath, ips } = await createCertificate(telegramId)
-    // const certificate = fs.readFileSync(certificatePath, 'utf8')
-    const certificate = 'this is cert and remotes will be there $remotes_here$'
-    const ips = [1, 2 ,3]
+    const { certificatePath, ips } = await createCertificate(telegramId)
+    const certificate = fs.readFileSync(certificatePath, 'utf8')
     const userToBase = {telegramId, name, username, expiresIn, isSubscriptionActive: true, certificate, authCode, ips }
     return userToBase
 }
