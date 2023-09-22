@@ -9,6 +9,7 @@ const dayjs = require('dayjs')
 const axios = require('axios')
 const {bot} = require("./api");
 const config = require('./config/index')
+const fs = require("fs");
 dayjs.extend(isSameOrBefore)
 
 const availableIps = config.servers.map((s) => s.ip)

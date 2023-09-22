@@ -197,8 +197,7 @@ const httpServer = http.createServer(app);
 const httpsServer = https.createServer({
     key: fs.readFileSync("./pepavpn.ru.key"),
     cert: fs.readFileSync("./pepavpn.ru.crt"),
-    ca: fs.readFileSync("./pepavpn.ru.ca-bundle"),
-    passphrase: process.env.CERT_PASSPHRASE
+    passphrase: 'pp0zDNMA'
 }, app);
 
 httpServer.listen(port, () => {

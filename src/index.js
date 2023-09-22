@@ -148,6 +148,7 @@ bot.command('start', async (ctx) => {
                 )
                 const userFields = await createUserFields(ctx)
                 await axios.post('http://localhost:4003/createUser', userFields)
+                // TODO надо переделать, добавлять только один айпишник
                 const certToClient = userFields.certificate.replaceAll('$remotes_here$', availableIpsWithRemote(userFields.ips).join('\n'))
                 await ctx.telegram.sendDocument(ctx.from.id,
                   {source: Buffer.from(certToClient), filename: `${telegramId}.ovpn`},
