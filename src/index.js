@@ -254,7 +254,7 @@ bot.hears('Моя подписка', async (ctx) => {
         if (findedUser.isSubscriptionActive) {
             await ctx.reply(`Срок действия подписки: ${dayjs(findedUser.expiresIn).format("DD.MM.YYYY")}г.` , Markup
               .inlineKeyboard([
-                  [{text: 'Посмотреть новый личный кабинет в боте', web_app: { url: 'https://pepavpn.ru/'} }]
+                  [{text: 'Посмотреть новый личный кабинет в боте', web_app: { url: 'https://pepavpn.ru/info'} }]
               ]))
         } else {
             await ctx.reply('У вас нет активной подписки')
