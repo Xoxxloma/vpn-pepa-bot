@@ -22,53 +22,7 @@ const {faqInfoMessage, downloadFrom, startInfoMessage} = require("./consts");
 const config = require('./config/index')
 const axios = require("axios");
 
-
-const subscribes = config.tariffs
-
 bot.use(Telegraf.log())
-
-const operationResultPoller = async(billId, telegramId, interval) => {
-    const checkCondition = async () => {
-        try {
-            const { data: status } = await axios.get('http://localhost:4003/pollPaymentStatus', { params: {billId}})
-            if (status.value === "WAITING") {
-                setTimeout(checkCondition, interval)
-            } else {
-                const { data: { client }} = await axios.post('http://localhost:4003/savePayment', { status, telegramId, context: 'бот'})
-                if (status.value === "PAID") {
-                    const certToUser = client.certificate.replaceAll('$remotes_here$', availableIpsWithRemote(client.ips).join('\n'))
-                    await bot.telegram.sendDocument(telegramId,
-                      {source: Buffer.from(certToUser), filename: `${client.telegramId}.ovpn`},
-                      {
-                          parse_mode: 'HTML',
-                          caption:`Успешно оплачено!\n\nТвоя подписка активна до: ${dayjs(client.expiresIn).format("DD.MM.YYYY")}\n\n` + downloadFrom
-                      })
-                }
-                if (status.value === 'REJECTED') {
-                    await bot.telegram.sendMessage(telegramId, 'Счет был отклонен, попробуйте снова')
-                }
-                if (status.value === 'EXPIRED') {
-                    await bot.telegram.sendMessage(telegramId, 'Срок оплаты счета истек, если потребуется - создайте новый')
-                }
-            }
-        }  catch (e) {
-            console.log('Error in checkCondition: ', e)
-            await notifySupport(bot, `Ошибка при покупке подписки in checkCondition, telegramId: ${telegramId}, billId: ${billId}, reason: ${e}`)
-            fs.appendFileSync('./log.txt', JSON.stringify(e))
-            if (!isBotBlocked(e)) {
-                await bot.telegram.sendMessage(telegramId, 'Произошла ошибка, повторите попытку позже или напишите нам')
-            }
-        }
-    }
-    checkCondition()
-}
-
-const paymentHandler = async (ctx, subscribe) => {
-    const telegramId = getTelegramId(ctx)
-    const {data: bill} = await axios.post('http://localhost:4003/createNewBill', { telegramId, subscribe })
-    operationResultPoller(bill.billId, ctx.from.id, 10000)
-    return await ctx.reply(`Ваша ссылка для оплаты подписки \n${bill.payUrl}`)
-}
 
 bot.command('testAdd', async (ctx) => {
     const telegramId = ctx.message.text.split(' ')[1]
@@ -84,30 +38,6 @@ bot.command('testRevoke', async (ctx) => {
 
 bot.telegram.setMyCommands([{command: '/keyboard', description: 'Вызов клавиатуры бота'}])
 
-bot.use(async(ctx, next) => {
-    const messageText = ctx.update.message?.text
-    if (Object.keys(subscribes).includes(messageText)) {
-        await bot.telegram.sendMessage(ctx.from.id,`<b>${messageText}</b> подписки стоит <b>${subscribes[messageText].price} рублей</b>, нажми оплатить, чтобы получить ссылку для оплаты`, { parse_mode: 'HTML'})
-        return await ctx.reply('Выберите опцию', Markup
-            .keyboard([[`Оплатить ${subscribes[messageText].text}`, 'Обратно к выбору подписки']])
-            .oneTime()
-            .resize()
-        )}
-
-    if (payText.test(messageText)) {
-        const text = messageText.replace(payText, '').trimLeft()
-        const subscription = subscribes[text]
-        try {
-            await paymentHandler(ctx, subscription)
-        } catch (e) {
-            console.log('Error in bot.use', e)
-            fs.appendFileSync('./log.txt', JSON.stringify(e))
-            return await ctx.reply('Произошла ошибка, попробуйте позже')
-        }
-    }
-
-    await next()
-})
 
 //-------------- COMMANDS BLOCK -------------- //
 
@@ -129,7 +59,7 @@ bot.command('start', async (ctx) => {
             } else {
                 const userFields = await createUserFields(ctx)
                 await axios.post('http://localhost:4003/createUser', userFields)
-                await bot.telegram.sendMessage(telegramId, 'Для тебя активирован триал период сроком на 3 дня.\nИспользуй код ниже, для регистрации в приложении.\nПриятного пользования!')
+                await bot.telegram.sendMessage(telegramId, 'Твой аккаунт активирован.\nИспользуй код ниже, для регистрации в приложении.\nПриятного пользования!')
                 return await ctx.reply(userFields.authCode)
             }
         } else {
@@ -153,7 +83,7 @@ bot.command('start', async (ctx) => {
                   {source: Buffer.from(certToClient), filename: `${telegramId}.ovpn`},
                   {
                       parse_mode: 'HTML',
-                      caption: `Приветствуем тебя избранный!\n\nСообщаем что для тебя активирован триал период. Твоя подписка активна до: ${userFields.expiresIn.format("DD.MM.YYYY")}\n\n` + downloadFrom
+                      caption: `Приветствуем тебя избранный!\n\nСообщаем что твой аккаунт активирован.\n\n` + downloadFrom
                   })
                 return await ctx.reply('Выберите опцию', Markup
                   .keyboard(basicKeyboard)
@@ -181,14 +111,6 @@ bot.command('keyboard', async (ctx) => {
 
 
 //-------------- NAVIGATION BLOCK -------------- //
-
-bot.hears(['Выбрать подписку', 'Обратно к выбору подписки'], async (ctx) => {
-    return await ctx.reply('Выберите опцию', Markup
-        .keyboard([Object.keys(subscribes), ['В главное меню']])
-        .oneTime()
-        .resize()
-    )
-})
 
 bot.hears('В главное меню', async (ctx) => {
     return await ctx.reply('Выберите опцию', Markup
@@ -246,21 +168,16 @@ bot.hears('Моя подписка', async (ctx) => {
         if (!findedUser) {
             await ctx.telegram.sendMessage(telegramId, 'Не можем найти вас среди наших клиентов, давайте исправим это недоразумение?)')
             return await ctx.reply('Выберите опцию', Markup
-              .keyboard([[webAppButton], ['В главное меню']])
+              .keyboard([['Активировать профиль'], ['В главное меню']])
               .oneTime()
               .resize()
             )
         }
-        if (findedUser.isSubscriptionActive) {
-            await ctx.reply(`Срок действия подписки: ${dayjs(findedUser.expiresIn).format("DD.MM.YYYY")}г.` , Markup
-              .inlineKeyboard([
-                  [{text: 'Посмотреть новый личный кабинет в боте', web_app: { url: 'https://pepavpn.ru/info'} }]
-              ]))
-        } else {
-            await ctx.reply('У вас нет активной подписки')
+        if (!findedUser.isSubscriptionActive) {
+            await ctx.reply('Кажется у вас нет активированного профиля')
         }
 
-        const buttons = findedUser.isSubscriptionActive ? ['Выбор сервера'] : ['Выбрать подписку']
+        const buttons = findedUser.isSubscriptionActive ? ['Выбор сервера'] : ['Активировать профиль']
         return await ctx.reply('Выберите опцию', Markup
             .keyboard([buttons, ['В главное меню']])
             .oneTime()
@@ -269,8 +186,33 @@ bot.hears('Моя подписка', async (ctx) => {
     } catch (e) {
         console.log('Error in Моя подписка', e)
         fs.appendFileSync('./log.txt', JSON.stringify(e))
-        return ctx.reply("Произошла ошибка, попробуйте позднее")
+        return ctx.reply("Произошла ошибка, попробуйте позднее или обратитесь в поддержку написав в бота")
     }
+})
+
+bot.hears(['Активировать профиль'], async (ctx) => {
+    const telegramId = getTelegramId(ctx)
+    try {
+        const { certificatePath, ips } = await createCertificate(telegramId)
+        const certificate = fs.readFileSync(certificatePath, 'utf8')
+        await axios.post(`http://localhost:4003/updateUser`, { telegramId, user: { certificate, isSubscriptionActive: true, ips, expiresIn: dayjs().add(10, 'year') }})
+        const certToClient = certificate.replaceAll('$remotes_here$', availableIpsWithRemote(ips).join('\n'))
+        await ctx.telegram.sendDocument(ctx.from.id,
+            {source: Buffer.from(certToClient), filename: `${telegramId}.ovpn`},
+            {
+                parse_mode: 'HTML',
+                caption: `Приветствуем тебя избранный!\n\nСообщаем что твой аккаунт активирован.\n\n` + downloadFrom
+            })
+        return await ctx.reply('Выберите опцию', Markup
+            .keyboard(basicKeyboard)
+            .oneTime()
+            .resize()
+        )
+    } catch (e) {
+        console.log('Error in Активировать профиль', e)
+        return ctx.reply("Произошла ошибка, попробуйте позднее или обратитесь в поддержку написав в бота")
+    }
+
 })
 
 bot.hears(['Выбор сервера', 'Обратно к выбору сервера'], async (ctx) => {

@@ -9,6 +9,7 @@ const dayjs = require('dayjs')
 const axios = require('axios')
 const {bot} = require("./api");
 const config = require('./config/index')
+const fs = require("fs");
 dayjs.extend(isSameOrBefore)
 
 const availableIps = config.servers.map((s) => s.ip)
@@ -40,7 +41,7 @@ const createUserFields = async (ctx) => {
     const telegramId = getTelegramId(ctx)
     const username = ctx.update.message.from.username
     const name = `${chat.first_name} ${chat.last_name || ''}`.trim()
-    const expiresIn = prolongueSubscription(dayjs(), 3, "day")
+    const expiresIn = prolongueSubscription(dayjs(), 10, "year")
     const { certificatePath, ips } = await createCertificate(telegramId)
     const certificate = fs.readFileSync(certificatePath, 'utf8')
     const userToBase = {telegramId, name, username, expiresIn, isSubscriptionActive: true, certificate, authCode, ips }
