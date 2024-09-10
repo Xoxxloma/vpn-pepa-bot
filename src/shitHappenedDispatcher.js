@@ -9,7 +9,12 @@ const shutdownText = '<b>Всем привет!</b>\n\nПоступает бол
 
 const prodStickerId = "CAACAgIAAxkBAALoOmX0PjVUce70F_r9sCKihNE9TTARAAKVQQACP8ChSwsDWmTnvKtMNAQ"
 const testStickerId = "CAACAgIAAxkBAAIOU2X0ONpMKN-O6UPCF2DrKkC0wgwSAAIIRgACMXCgS6admt3Hk7ctNAQ"
-const donationText = '<b>Здравствуйте!\nРазрешите обратиться.</b>\n\nВообще я успешный серийный предприниматель, стартапер, криптоинвестор и ит-евангелист, а впн это так, для души. Так вот о чем это я, <a href="https://pay.cloudtips.ru/p/52899e68">не будет немного мелочи</a>?'
+const pepaOnlyFans = "CAACAgIAAxkBAALp32X0XSJO9qyXxK3qv5WUmmGnnC8hAAKiQgACP8ChSzonRCR7A_A1NAQ"
+const pepaTerminator = "CAACAgIAAxkBAAL6_GZ9MOdSdSOxL623hjCH6WCswcgWAALySgACeXLoS6fNbgQvS7-tNQQ"
+const weWasBanned = '<b>Скайнет повержен, апокалипсис отложен, работа сервиса восстановлена.</b>\n\nПри возникновении проблем:\nскачайте сертификат из бота заново / рефрешните наше приложение.\nЕсли данные действия не помогут - напишите нам, мы попробуем разобраться.\n\n' +
+    'Раз уж появился повод для рассылки, наш PR-менеджер просил переслать следующий текст (Публикуется с сохранением орфографии):\n\n' +
+    '<b>"</b>Благодарим всех, кто донатит на поддержание сервиса и напоминаем, что <b>на одежду, мотоцикл, а так же спасение Джона Коннора</b> всегда можно кинуть сотку в стакан / оформить подписку <a href="https://boosty.to/pepavpn/donate">здесь</a><b>"</b>'
+
 
 const shitHappenedDispatcher = async () => {
   const users = await Client.find({ isSubscriptionActive: true })
@@ -17,8 +22,8 @@ const shitHappenedDispatcher = async () => {
   const usersPromises = users.map(async(user) => {
 
     try {
-      await bot.telegram.sendMessage(user.telegramId, donationText, {parse_mode: 'HTML' })
-      await bot.telegram.sendSticker(user.telegramId, prodStickerId)
+      await bot.telegram.sendMessage(user.telegramId, weWasBanned, {parse_mode: 'HTML', disable_web_page_preview: true })
+      await bot.telegram.sendSticker(user.telegramId, pepaTerminator)
     } catch (e) {
       console.log(e, 'cannot send')
     }
@@ -26,7 +31,6 @@ const shitHappenedDispatcher = async () => {
   await Promise.all(usersPromises)
   await conn.close()
   console.log('dispatched to all clients!')
-
 }
 
 shitHappenedDispatcher()

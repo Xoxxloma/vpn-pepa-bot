@@ -1,4 +1,4 @@
-const webAppButton = {text: 'Донат', web_app: { url: 'https://pay.cloudtips.ru/p/52899e68' } }
+const webAppButton = {text: 'Донат', web_app: { url: 'https://pepavpn.ru/' } }
 const basicKeyboard = [[webAppButton], ["Моя подписка"], ['Инструкция', 'О нас']]
 
 const dimaID = process.env.DIMA_TELEGRAM_ID
