@@ -316,6 +316,21 @@ bot.hears('О нас', async (ctx) => {
 })
 //-------------- CONTACTS BLOCK -------------- //
 
+
+//-------------- DOWNLOAD APK BLOCK -------------- //
+bot.hears('Скачать приложение на android', async (ctx) => {
+    try {
+        await bot.telegram.sendMessage(ctx.from.id, 'Отправляем установочный файл, пожалуйста подождите')
+        await ctx.replyWithDocument('BQACAgIAAxkBAAEBF9xnE7fVAzUJmLuGEeOOM1vITpqHxQACo1YAAr52oEhesIx4p4VljzYE')
+    } catch (e) {
+        console.log('Error in скачивание apk файла', e)
+        return ctx.reply("Произошла ошибка, попробуйте позднее или обратитесь в поддержку, мы обязательно Вам поможем.")
+    }
+})
+//-------------- DOWNLOAD APK BLOCK -------------- //
+
+
+
 bot.hears(/./, async (ctx) => {
     const { message } = ctx
     const name = getUserName(message)

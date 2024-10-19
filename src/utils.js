@@ -12,7 +12,7 @@ const config = require('./config/index')
 const fs = require("fs");
 dayjs.extend(isSameOrBefore)
 
-const availableIps = config.servers.map((s) => s.ip)
+const availableIps = config.servers.filter((s) => s.ip !== '185.105.108.8').map((s) => s.ip)
 const availableIpsWithRemote = (arr) => arr.map((ip) => `remote ${ip} 1194 udp`)
 
 const createBasicBillfields = (amount, telegramId) => ({

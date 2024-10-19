@@ -1,5 +1,5 @@
-const webAppButton = {text: 'Донат', web_app: { url: 'https://pepavpn.ru/' } }
-const basicKeyboard = [[webAppButton], ["Моя подписка"], ['Инструкция', 'О нас']]
+const webAppButton = {text: 'Донат', web_app: { url: 'https://boosty.to/pepavpn/donate' } }
+const basicKeyboard = [[webAppButton], ["Моя подписка"], ['Инструкция', 'О нас'], ['Скачать приложение на android']]
 
 const dimaID = process.env.DIMA_TELEGRAM_ID
 const kostyaId = process.env.KOSTYA_TELEGRAM_ID
